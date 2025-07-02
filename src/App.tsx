@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,6 +16,7 @@ import Bets from "./pages/Bets";
 import Wallet from "./pages/Wallet";
 import Settings from "./pages/Settings";
 import PaymentGateways from "./pages/PaymentGateways";
+import ClientSite from "./pages/ClientSite";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +29,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/client" element={<ClientSite />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
