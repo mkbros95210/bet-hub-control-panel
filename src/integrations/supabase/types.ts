@@ -328,6 +328,97 @@ export type Database = {
           },
         ]
       }
+      user_bets: {
+        Row: {
+          amount: number
+          bet_type: string
+          id: string
+          match_id: string | null
+          odds: number
+          placed_at: string | null
+          potential_win: number
+          result: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          bet_type: string
+          id?: string
+          match_id?: string | null
+          odds: number
+          placed_at?: string | null
+          potential_win: number
+          result?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          bet_type?: string
+          id?: string
+          match_id?: string | null
+          odds?: number
+          placed_at?: string | null
+          potential_win?: number
+          result?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_bets_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          payment_gateway_id: string | null
+          processed_at: string | null
+          reference_id: string | null
+          status: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          payment_gateway_id?: string | null
+          processed_at?: string | null
+          reference_id?: string | null
+          status?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          payment_gateway_id?: string | null
+          processed_at?: string | null
+          reference_id?: string | null
+          status?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_payment_gateway_id_fkey"
+            columns: ["payment_gateway_id"]
+            isOneToOne: false
+            referencedRelation: "payment_gateways"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       withdrawal_requests: {
         Row: {
           admin_notes: string | null
@@ -379,6 +470,10 @@ export type Database = {
     Functions: {
       create_admin_user: {
         Args: { user_email: string; user_password: string; user_name?: string }
+        Returns: string
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
     }

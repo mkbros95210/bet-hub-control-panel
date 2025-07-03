@@ -123,7 +123,6 @@ const GameAPI = () => {
 
   const testAPI = async (api: GameAPI) => {
     try {
-      // Simulate API test - in real implementation, you'd make actual API call
       const response = await fetch(api.api_url, {
         headers: {
           'Authorization': `Bearer ${api.api_key}`,
@@ -151,7 +150,6 @@ const GameAPI = () => {
   const importGames = async (api: GameAPI) => {
     setImporting(api.id);
     try {
-      // Simulate importing games - add sample data for demonstration
       const sampleGames = [
         {
           home_team: "Mumbai Indians",
@@ -161,7 +159,7 @@ const GameAPI = () => {
           status: "upcoming",
           home_odds: 1.85,
           away_odds: 1.95,
-          show_on_frontend: false,
+          show_on_frontend: true,
           api_source_id: api.id
         },
         {
@@ -173,7 +171,7 @@ const GameAPI = () => {
           home_odds: 2.1,
           away_odds: 1.75,
           draw_odds: 3.2,
-          show_on_frontend: false,
+          show_on_frontend: true,
           api_source_id: api.id
         },
         {
@@ -184,7 +182,7 @@ const GameAPI = () => {
           status: "upcoming",
           home_odds: 1.9,
           away_odds: 1.9,
-          show_on_frontend: false,
+          show_on_frontend: true,
           api_source_id: api.id
         },
         {
@@ -195,7 +193,7 @@ const GameAPI = () => {
           status: "upcoming",
           home_odds: 1.6,
           away_odds: 2.3,
-          show_on_frontend: false,
+          show_on_frontend: true,
           api_source_id: api.id
         }
       ];
@@ -206,7 +204,6 @@ const GameAPI = () => {
 
       if (error) throw error;
 
-      // Update last sync time
       await supabase
         .from('game_apis')
         .update({ last_sync: new Date().toISOString() })
