@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,43 @@ const GameAPI = () => {
 
   useEffect(() => {
     fetchAPIs();
+    addTheOddsAPIIfNotExists();
   }, []);
+
+  const addTheOddsAPIIfNotExists = async () => {
+    try {
+      // Check if The Odds API already exists
+      const { data: existingAPI } = await supabase
+        .from('game_apis')
+        .select('id')
+        .eq('name', 'The Odds API')
+        .single();
+
+      if (!existingAPI) {
+        // Add The Odds API
+        const { error } = await supabase
+          .from('game_apis')
+          .insert({
+            name: 'The Odds API',
+            api_url: 'https://api.the-odds-api.com/v4/sports/',
+            api_key: 'fac67bb4d9a4714e2023c44619f55796',
+            is_active: true
+          });
+
+        if (error) {
+          console.error('Error adding The Odds API:', error);
+        } else {
+          toast({
+            title: "The Odds API Added",
+            description: "The Odds API has been automatically added to your connected APIs.",
+          });
+          fetchAPIs();
+        }
+      }
+    } catch (error) {
+      console.error('Error checking/adding The Odds API:', error);
+    }
+  };
 
   const fetchAPIs = async () => {
     try {
@@ -63,17 +98,40 @@ const GameAPI = () => {
   const handleAddAPI = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!apiForm.name || !apiForm.url || !apiForm.apiKey) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
-      const { error } = await supabase
+      console.log('Adding API with data:', {
+        name: apiForm.name,
+        api_url: apiForm.url,
+        api_key: apiForm.apiKey,
+        is_active: true
+      });
+
+      const { data, error } = await supabase
         .from('game_apis')
         .insert({
           name: apiForm.name,
           api_url: apiForm.url,
           api_key: apiForm.apiKey,
           is_active: true
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('API added successfully:', data);
 
       toast({
         title: "API Added Successfully",
@@ -82,11 +140,11 @@ const GameAPI = () => {
 
       setApiForm({ name: "", url: "", apiKey: "", description: "" });
       fetchAPIs();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding API:', error);
       toast({
         title: "Error",
-        description: "Failed to add API",
+        description: error.message || "Failed to add API. Please check your connection and try again.",
         variant: "destructive",
       });
     }
