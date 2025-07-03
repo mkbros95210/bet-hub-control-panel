@@ -15,6 +15,7 @@ interface Match {
   home_team: string;
   away_team: string;
   sport: string;
+  category?: string;
   match_date: string;
   status: string;
   home_odds?: number;
@@ -24,31 +25,52 @@ interface Match {
   api_source_id?: string;
 }
 
+interface SportCategory {
+  id: string;
+  category_key: string;
+  category_name: string;
+  is_active: boolean;
+}
+
 const Games = () => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [categories, setCategories] = useState<SportCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchMatches();
+    fetchData();
   }, []);
 
-  const fetchMatches = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch matches
+      const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
         .select('*')
         .order('match_date', { ascending: false });
 
-      if (error) throw error;
-      setMatches(data || []);
+      if (matchesError) throw matchesError;
+
+      // Fetch active categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('sport_categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('category_name', { ascending: true });
+
+      if (categoriesError) throw categoriesError;
+
+      setMatches(matchesData || []);
+      setCategories(categoriesData || []);
     } catch (error) {
-      console.error('Error fetching matches:', error);
+      console.error('Error fetching data:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch matches",
+        description: "Failed to fetch matches and categories",
         variant: "destructive",
       });
     } finally {
@@ -70,7 +92,7 @@ const Games = () => {
         description: `Match ${showOnFrontend ? 'shown on' : 'hidden from'} frontend`,
       });
 
-      fetchMatches();
+      fetchData();
     } catch (error) {
       console.error('Error updating match visibility:', error);
       toast({
@@ -87,8 +109,9 @@ const Games = () => {
                          match.sport.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || match.status === statusFilter;
+    const matchesCategory = categoryFilter === "all" || match.category === categoryFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesCategory;
   });
 
   const getStatusBadge = (status: string) => {
@@ -144,6 +167,18 @@ const Games = () => {
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 rounded-md border border-border bg-background text-foreground"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.category_key}>
+                  {category.category_name}
+                </option>
+              ))}
+            </select>
           </div>
         </CardContent>
       </Card>
@@ -163,6 +198,7 @@ const Games = () => {
               <TableRow>
                 <TableHead>Match</TableHead>
                 <TableHead>Sport</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Odds</TableHead>
@@ -178,6 +214,13 @@ const Games = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{match.sport}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {match.category ? (
+                      <Badge variant="secondary">{match.category}</Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

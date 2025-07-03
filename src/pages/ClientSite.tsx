@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ interface Match {
   home_team: string;
   away_team: string;
   sport: string;
+  category?: string;
   match_date: string;
   status: string;
   home_odds?: number;
@@ -24,8 +24,16 @@ interface Match {
   draw_odds?: number;
 }
 
+interface SportCategory {
+  id: string;
+  category_key: string;
+  category_name: string;
+  is_active: boolean;
+}
+
 const ClientSite = () => {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [categories, setCategories] = useState<SportCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("upcoming");
   const [loading, setLoading] = useState(true);
@@ -39,36 +47,50 @@ const ClientSite = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const categories = [
+  // Create dynamic categories based on active sport categories
+  const dynamicCategories = [
     { id: "all", name: "All Sports", icon: Trophy },
-    { id: "cricket", name: "Cricket", icon: Trophy },
-    { id: "football", name: "Football", icon: Trophy },
-    { id: "tennis", name: "Tennis", icon: Trophy },
-    { id: "basketball", name: "Basketball", icon: Trophy },
+    ...categories.map(cat => ({
+      id: cat.category_key,
+      name: cat.category_name,
+      icon: Trophy
+    }))
   ];
 
   const categoriesPerSlide = 4;
-  const maxSlides = Math.ceil(categories.length / categoriesPerSlide);
+  const maxSlides = Math.ceil(dynamicCategories.length / categoriesPerSlide);
 
   useEffect(() => {
-    fetchMatches();
+    fetchData();
     if (user) {
       fetchUserBalance();
     }
   }, [user]);
 
-  const fetchMatches = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch matches that are visible on frontend
+      const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
         .select('*')
         .eq('show_on_frontend', true)
         .order('match_date', { ascending: true });
 
-      if (error) throw error;
-      setMatches(data || []);
+      if (matchesError) throw matchesError;
+
+      // Fetch active sport categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('sport_categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('category_name', { ascending: true });
+
+      if (categoriesError) throw categoriesError;
+
+      setMatches(matchesData || []);
+      setCategories(categoriesData || []);
     } catch (error) {
-      console.error('Error fetching matches:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -95,7 +117,7 @@ const ClientSite = () => {
     const now = new Date();
     return matches.filter(match => {
       const matchDate = new Date(match.match_date);
-      const isFiltered = activeCategory === "all" || match.sport === activeCategory;
+      const isFiltered = activeCategory === "all" || match.category === activeCategory || match.sport === activeCategory;
       
       if (!isFiltered) return false;
       
@@ -230,7 +252,7 @@ const ClientSite = () => {
               Sports
             </h3>
             <div className="space-y-2">
-              {categories.map((category) => (
+              {dynamicCategories.map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setActiveCategory(category.id)}
@@ -245,7 +267,7 @@ const ClientSite = () => {
                   <Badge variant="secondary" className="ml-auto bg-gray-700 text-gray-300">
                     {category.id === "all" 
                       ? matches.length 
-                      : matches.filter(m => m.sport === category.id).length
+                      : matches.filter(m => m.category === category.id || m.sport === category.id).length
                     }
                   </Badge>
                 </button>
@@ -305,7 +327,7 @@ const ClientSite = () => {
                 >
                   {Array.from({ length: maxSlides }).map((_, slideIndex) => (
                     <div key={slideIndex} className="grid grid-cols-2 gap-4 w-full flex-shrink-0">
-                      {categories
+                      {dynamicCategories
                         .slice(slideIndex * categoriesPerSlide, (slideIndex + 1) * categoriesPerSlide)
                         .map((category) => (
                           <Card 
@@ -334,7 +356,7 @@ const ClientSite = () => {
                               >
                                 {category.id === "all" 
                                   ? matches.length 
-                                  : matches.filter(m => m.sport === category.id).length
+                                  : matches.filter(m => m.category === category.id || m.sport === category.id).length
                                 }
                               </Badge>
                             </CardContent>
@@ -349,7 +371,7 @@ const ClientSite = () => {
 
           {/* Sports Categories Grid - Desktop */}
           <div className="hidden lg:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-            {categories.slice(1).map((category) => (
+            {dynamicCategories.slice(1).map((category) => (
               <Card 
                 key={category.id}
                 className={`cursor-pointer transition-all hover:scale-105 ${
@@ -374,7 +396,7 @@ const ClientSite = () => {
                         : 'bg-gray-800 text-gray-400'
                     }`}
                   >
-                    {matches.filter(m => m.sport === category.id).length}
+                    {matches.filter(m => m.category === category.id || m.sport === category.id).length}
                   </Badge>
                 </CardContent>
               </Card>

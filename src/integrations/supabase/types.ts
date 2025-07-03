@@ -134,6 +134,7 @@ export type Database = {
           api_source_id: string | null
           away_odds: number | null
           away_team: string
+          category: string | null
           created_at: string
           draw_odds: number | null
           home_odds: number | null
@@ -149,6 +150,7 @@ export type Database = {
           api_source_id?: string | null
           away_odds?: number | null
           away_team: string
+          category?: string | null
           created_at?: string
           draw_odds?: number | null
           home_odds?: number | null
@@ -164,6 +166,7 @@ export type Database = {
           api_source_id?: string | null
           away_odds?: number | null
           away_team?: string
+          category?: string | null
           created_at?: string
           draw_odds?: number | null
           home_odds?: number | null
@@ -262,6 +265,44 @@ export type Database = {
           wallet_balance?: number | null
         }
         Relationships: []
+      }
+      sport_categories: {
+        Row: {
+          api_source_id: string
+          category_key: string
+          category_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_source_id: string
+          category_key: string
+          category_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_source_id?: string
+          category_key?: string
+          category_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sport_categories_api_source_id_fkey"
+            columns: ["api_source_id"]
+            isOneToOne: false
+            referencedRelation: "game_apis"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {

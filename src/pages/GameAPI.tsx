@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Settings, Search, Trash2, Eye } from "lucide-react";
+import { Plus, Settings, Search, Trash2, Eye, List } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface GameAPI {
@@ -249,6 +250,10 @@ const GameAPI = () => {
     navigate(`/admin/api-games/${apiId}?name=${encodeURIComponent(apiName)}`);
   };
 
+  const showSportCategories = (apiId: string, apiName: string) => {
+    navigate(`/admin/sport-categories/${apiId}?name=${encodeURIComponent(apiName)}`);
+  };
+
   const deleteAPI = async (apiId: string) => {
     try {
       const { error } = await supabase
@@ -420,11 +425,20 @@ const GameAPI = () => {
                     <Button 
                       size="sm" 
                       variant="secondary"
+                      onClick={() => showSportCategories(api.id, api.name)}
+                      className="flex-1"
+                    >
+                      <List className="h-4 w-4 mr-1" />
+                      Categories
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="secondary"
                       onClick={() => showAPIGames(api.id, api.name)}
                       className="flex-1"
                     >
                       <Eye className="h-4 w-4 mr-1" />
-                      Show Games
+                      Games
                     </Button>
                   </div>
                 </div>
