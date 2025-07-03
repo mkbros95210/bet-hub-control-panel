@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -123,25 +122,44 @@ const GameAPI = () => {
 
   const testAPI = async (api: GameAPI) => {
     try {
-      const response = await fetch(api.api_url, {
+      // For The Odds API, we need to append the API key as a query parameter
+      const testUrl = api.api_url.includes('the-odds-api.com') 
+        ? `${api.api_url}${api.api_url.includes('?') ? '&' : '?'}apiKey=${api.api_key}`
+        : api.api_url;
+
+      console.log('Testing API with URL:', testUrl);
+
+      const response = await fetch(testUrl, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${api.api_key}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // Only add Authorization header for non-odds-api
+          ...(api.api_url.includes('the-odds-api.com') ? {} : {
+            'Authorization': `Bearer ${api.api_key}`
+          })
         }
       });
 
+      console.log('API Response status:', response.status);
+      
       if (response.ok) {
+        const data = await response.json();
+        console.log('API Response data:', data);
+        
         toast({
           title: "API Test Successful",
-          description: `Connection to ${api.name} is working properly.`,
+          description: `Connection to ${api.name} is working properly. Found ${Array.isArray(data) ? data.length : 'some'} sports.`,
         });
       } else {
-        throw new Error('API test failed');
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`API returned ${response.status}: ${errorText}`);
       }
     } catch (error) {
+      console.error('API Test Error:', error);
       toast({
         title: "API Test Failed",
-        description: `Failed to connect to ${api.name}. Please check your credentials.`,
+        description: `Failed to connect to ${api.name}. ${error instanceof Error ? error.message : 'Please check your credentials.'}`,
         variant: "destructive",
       });
     }
@@ -277,7 +295,13 @@ const GameAPI = () => {
               <Plus className="h-5 w-5" />
               Add Game API
             </CardTitle>
-            <CardDescription>Connect a new external game data source</CardDescription>
+            <CardDescription>
+              Connect a new external game data source
+              <br />
+              <small className="text-amber-600">
+                For The Odds API, use: https://api.the-odds-api.com/v4/sports/
+              </small>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAddAPI} className="space-y-4">
@@ -303,6 +327,9 @@ const GameAPI = () => {
                   required
                   className="bg-input/50 border-border/50 focus:border-primary"
                 />
+                <small className="text-muted-foreground">
+                  Don't include API key in URL - enter it separately below
+                </small>
               </div>
               
               <div className="space-y-2">
