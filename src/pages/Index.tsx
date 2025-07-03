@@ -6,8 +6,8 @@ const Index = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Redirect to client site instead of non-existent /sports route
-    navigate('/client');
+    // Redirect to sports site
+    navigate('/sports');
   }, [navigate]);
 
   return (

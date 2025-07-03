@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Trophy, Users, Star, Wallet, User, ChevronLeft, ChevronRight } from "lucide-react";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import WalletModal from "@/components/WalletModal";
 import ProfileModal from "@/components/ProfileModal";
