@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Settings, Search, Trash2 } from "lucide-react";
+import { Plus, Settings, Search, Trash2, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface GameAPI {
   id: string;
@@ -32,6 +33,7 @@ const GameAPI = () => {
   const [importing, setImporting] = useState<string | null>(null);
   
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAPIs();
@@ -146,6 +148,17 @@ const GameAPI = () => {
           api_source_id: api.id
         },
         {
+          home_team: "Lakers",
+          away_team: "Warriors",
+          sport: "basketball",
+          match_date: new Date(Date.now() + 36 * 60 * 60 * 1000).toISOString(),
+          status: "upcoming",
+          home_odds: 1.9,
+          away_odds: 1.9,
+          show_on_frontend: false,
+          api_source_id: api.id
+        },
+        {
           home_team: "Novak Djokovic",
           away_team: "Rafael Nadal",
           sport: "tennis",
@@ -186,6 +199,10 @@ const GameAPI = () => {
     } finally {
       setImporting(null);
     }
+  };
+
+  const showAPIGames = (apiId: string, apiName: string) => {
+    navigate(`/admin/api-games/${apiId}?name=${encodeURIComponent(apiName)}`);
   };
 
   const deleteAPI = async (apiId: string) => {
@@ -346,6 +363,15 @@ const GameAPI = () => {
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       {importing === api.id ? "Importing..." : "Import"}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="secondary"
+                      onClick={() => showAPIGames(api.id, api.name)}
+                      className="flex-1"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Show Games
                     </Button>
                   </div>
                 </div>

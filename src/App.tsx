@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./pages/AdminDashboard";
 import GameAPI from "./pages/GameAPI";
+import APIGames from "./pages/APIGames";
 import Games from "./pages/Games";
 import Users from "./pages/Users";
 import Bets from "./pages/Bets";
@@ -34,6 +36,7 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="game-api" element={<GameAPI />} />
+              <Route path="api-games/:apiId" element={<APIGames />} />
               <Route path="games" element={<Games />} />
               <Route path="users" element={<Users />} />
               <Route path="bets" element={<Bets />} />
