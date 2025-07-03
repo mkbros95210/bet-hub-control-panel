@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Trophy, Users, Star, Wallet, User, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Calendar, Trophy, Users, Star, Wallet, User, ChevronLeft, ChevronRight, Plus, History } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import WalletModal from "@/components/WalletModal";
 import ProfileModal from "@/components/ProfileModal";
 import BettingModal from "@/components/BettingModal";
+import BetHistoryModal from "@/components/BetHistoryModal";
 
 interface Match {
   id: string;
@@ -41,40 +42,12 @@ const ClientSite = () => {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [bettingModalOpen, setBettingModalOpen] = useState(false);
+  const [betHistoryModalOpen, setBetHistoryModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [userBalance, setUserBalance] = useState(0);
 
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-
-  // Mobile categories matching the first image
-  const mobileCategories = [
-    { id: "inplay", name: "Inplay", icon: "🟢", count: 121 },
-    { id: "cricket", name: "Cricket", icon: "🏏", count: 28 },
-    { id: "tennis", name: "Tennis", icon: "🎾", count: 109 },
-    { id: "kabaddi", name: "Kabaddi", icon: "🤼", count: 1 },
-  ];
-
-  // Desktop sidebar categories matching the second image
-  const desktopCategories = [
-    { id: "sports", name: "Sports", icon: "⚽", hasSubmenu: true },
-    { id: "e-sports", name: "E-Sports", icon: "🎮", hasSubmenu: true },
-    { id: "cricket", name: "Cricket", icon: "🏏" },
-    { id: "tennis", name: "Tennis", icon: "🎾" },
-    { id: "horse-racing", name: "Horse Racing", icon: "🏇" },
-    { id: "greyhound-racing", name: "Greyhound Racing", icon: "🐕" },
-    { id: "bigg-boss", name: "BIGG BOSS", icon: "⭐" },
-    { id: "soccer", name: "Soccer", icon: "⚽" },
-    { id: "politics", name: "Politics", icon: "🏛️" },
-    { id: "volleyball", name: "Volleyball", icon: "🏐" },
-    { id: "baseball", name: "Baseball", icon: "⚾" },
-    { id: "ice-hockey", name: "Ice Hockey", icon: "🏒" },
-    { id: "virtual-cricket", name: "Virtual Cricket", icon: "🏏" },
-    { id: "boxing", name: "Boxing", icon: "🥊" },
-    { id: "rugby-league", name: "Rugby League", icon: "🏉" },
-    { id: "darts", name: "Darts", icon: "🎯" },
-    { id: "snooker", name: "Snooker", icon: "🎱" },
-  ];
 
   useEffect(() => {
     fetchData();
@@ -85,14 +58,7 @@ const ClientSite = () => {
 
   const fetchData = async () => {
     try {
-      const { data: matchesData, error: matchesError } = await supabase
-        .from('matches')
-        .select('*')
-        .eq('show_on_frontend', true)
-        .order('match_date', { ascending: true });
-
-      if (matchesError) throw matchesError;
-
+      // Fetch only active categories from admin panel
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('sport_categories')
         .select('*')
@@ -101,8 +67,17 @@ const ClientSite = () => {
 
       if (categoriesError) throw categoriesError;
 
-      setMatches(matchesData || []);
+      // Fetch matches that belong to active categories
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('show_on_frontend', true)
+        .order('match_date', { ascending: true });
+
+      if (matchesError) throw matchesError;
+
       setCategories(categoriesData || []);
+      setMatches(matchesData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -126,6 +101,36 @@ const ClientSite = () => {
       console.error('Error fetching user balance:', error);
     }
   };
+
+  // Create dynamic categories from admin panel data
+  const dynamicCategories = [
+    { id: "inplay", name: "Inplay", icon: "🟢", count: matches.filter(m => m.status === 'live').length },
+    ...categories.map(cat => ({
+      id: cat.category_key,
+      name: cat.category_name,
+      icon: getIconForCategory(cat.category_key),
+      count: matches.filter(m => m.category === cat.category_key || m.sport === cat.category_key).length
+    }))
+  ];
+
+  function getIconForCategory(categoryKey: string): string {
+    const iconMap: Record<string, string> = {
+      cricket: "🏏",
+      tennis: "🎾",
+      football: "⚽",
+      soccer: "⚽",
+      basketball: "🏀",
+      kabaddi: "🤼",
+      volleyball: "🏐",
+      baseball: "⚾",
+      hockey: "🏒",
+      boxing: "🥊",
+      rugby: "🏉",
+      golf: "⛳",
+      motorsport: "🏎️"
+    };
+    return iconMap[categoryKey.toLowerCase()] || "🏅";
+  }
 
   const filterMatchesByStatus = (status: string) => {
     const now = new Date();
@@ -166,7 +171,7 @@ const ClientSite = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 pb-20 lg:pb-0">
       {/* Header */}
       <header className="bg-black/50 backdrop-blur-sm border-b border-orange-500/20 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -190,8 +195,8 @@ const ClientSite = () => {
                 <Button variant="ghost" className="text-orange-500 hover:text-orange-400">
                   Sports
                 </Button>
-                <Button variant="ghost" className="text-white hover:text-orange-400">
-                  Casino
+                <Button variant="ghost" className="text-white hover:text-orange-400" onClick={() => setWalletModalOpen(true)}>
+                  Wallet
                 </Button>
                 <Button variant="ghost" className="text-white hover:text-orange-400">
                   Promotion
@@ -199,8 +204,8 @@ const ClientSite = () => {
                 <Button variant="ghost" className="text-white hover:text-orange-400">
                   E-Sports
                 </Button>
-                <Button variant="ghost" className="text-white hover:text-orange-400">
-                  Sportsbook
+                <Button variant="ghost" className="text-white hover:text-orange-400" onClick={() => setBetHistoryModalOpen(true)}>
+                  Bet History
                 </Button>
                 <Button variant="ghost" className="text-white hover:text-orange-400">
                   JetX
@@ -261,7 +266,7 @@ const ClientSite = () => {
         <aside className="hidden lg:block w-64 bg-black/30 backdrop-blur-sm border-r border-orange-500/20 min-h-screen">
           <div className="p-4">
             <div className="space-y-2">
-              {desktopCategories.map((category) => (
+              {dynamicCategories.map((category) => (
                 <div key={category.id}>
                   <button
                     onClick={() => setActiveCategory(category.id)}
@@ -275,9 +280,9 @@ const ClientSite = () => {
                       <span className="text-lg">{category.icon}</span>
                       <span className="text-sm">{category.name}</span>
                     </div>
-                    {category.hasSubmenu && (
-                      <Plus className="h-4 w-4" />
-                    )}
+                    <Badge variant="secondary" className="text-xs">
+                      {category.count}
+                    </Badge>
                   </button>
                 </div>
               ))}
@@ -308,7 +313,7 @@ const ClientSite = () => {
           {/* Mobile Sports Categories */}
           <div className="lg:hidden mb-6">
             <div className="grid grid-cols-2 gap-3">
-              {mobileCategories.map((category) => (
+              {dynamicCategories.slice(0, 4).map((category) => (
                 <Card 
                   key={category.id}
                   className={`cursor-pointer transition-all hover:scale-105 ${
@@ -344,8 +349,8 @@ const ClientSite = () => {
           </div>
 
           {/* Desktop Sports Categories - Top Bar */}
-          <div className="hidden lg:flex items-center gap-4 mb-6">
-            {mobileCategories.map((category) => (
+          <div className="hidden lg:flex items-center gap-4 mb-6 flex-wrap">
+            {dynamicCategories.map((category) => (
               <Card 
                 key={category.id}
                 className={`cursor-pointer transition-all hover:scale-105 ${
@@ -391,7 +396,7 @@ const ClientSite = () => {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                  Cricket (10)
+                  Live Matches ({filterMatchesByStatus('live').length})
                 </h2>
                 <div className="text-white text-right">
                   <div className="text-xs text-gray-400">1 X 2</div>
@@ -400,102 +405,65 @@ const ClientSite = () => {
               
               {loading ? (
                 <div className="text-center py-8 text-gray-400">Loading matches...</div>
+              ) : filterMatchesByStatus('live').length > 0 ? (
+                filterMatchesByStatus('live').map((match) => (
+                  <Card key={match.id} className="bg-black/30 border-gray-700 hover:border-orange-500/50 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-red-500 text-xs animate-pulse">LIVE</Badge>
+                          <span className="text-white text-sm font-medium">
+                            {match.home_team} vs {match.away_team}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <span>{match.sport}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-400">
+                          {new Date(match.match_date).toLocaleString()}
+                        </div>
+                        <div className="flex gap-2">
+                          {match.home_odds && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-6"
+                              onClick={() => handleBetClick(match)}
+                            >
+                              {match.home_odds}
+                            </Button>
+                          )}
+                          {match.draw_odds && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-gray-400 text-gray-400 hover:bg-gray-400 hover:text-white px-6"
+                              onClick={() => handleBetClick(match)}
+                            >
+                              {match.draw_odds}
+                            </Button>
+                          )}
+                          {match.away_odds && (
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-pink-400 text-pink-400 hover:bg-pink-400 hover:text-white px-6"
+                              onClick={() => handleBetClick(match)}
+                            >
+                              {match.away_odds}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
               ) : (
-                <div className="space-y-4">
-                  {/* Sample Cricket Matches */}
-                  <Card className="bg-black/30 border-gray-700 hover:border-orange-500/50 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-orange-500 text-xs">IN-PLAY</Badge>
-                          <span className="text-white text-sm font-medium">
-                            Eng Legends (V) vs WI Legends (V)
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <span>Virtual Cricket League</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-400">
-                          TODAY 09:22
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-6"
-                            onClick={() => handleBetClick({
-                              id: '1',
-                              home_team: 'Eng Legends',
-                              away_team: 'WI Legends',
-                              sport: 'cricket',
-                              match_date: new Date().toISOString(),
-                              status: 'live',
-                              home_odds: 1.85
-                            })}
-                          >
-                            -
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="border-pink-400 text-pink-400 hover:bg-pink-400 hover:text-white px-6"
-                            onClick={() => handleBetClick({
-                              id: '1',
-                              home_team: 'Eng Legends',
-                              away_team: 'WI Legends',
-                              sport: 'cricket',
-                              match_date: new Date().toISOString(),
-                              status: 'live',
-                              away_odds: 2.10
-                            })}
-                          >
-                            -
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-black/30 border-gray-700 hover:border-orange-500/50 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-orange-500 text-xs">IN-PLAY</Badge>
-                          <span className="text-white text-sm font-medium">
-                            Pakistan (V) vs New Zealand (V)
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <span>Virtual Cricket League</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-400">
-                          TODAY 09:36
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-6"
-                          >
-                            -
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="border-pink-400 text-pink-400 hover:bg-pink-400 hover:text-white px-6"
-                          >
-                            -
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="text-center py-8 text-gray-400">
+                  No live matches available
                 </div>
               )}
             </TabsContent>
@@ -510,7 +478,7 @@ const ClientSite = () => {
                     <CardContent className="p-4">
                       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="text-2xl">🏏</div>
+                          <div className="text-2xl">{getIconForCategory(match.sport)}</div>
                           <div>
                             <h3 className="text-white font-medium">
                               {match.home_team} vs {match.away_team}
@@ -576,7 +544,7 @@ const ClientSite = () => {
                     <CardContent className="p-4">
                       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="text-2xl">🏏</div>
+                          <div className="text-2xl">{getIconForCategory(match.sport)}</div>
                           <div>
                             <h3 className="text-white font-medium">
                               {match.home_team} vs {match.away_team}
@@ -585,6 +553,7 @@ const ClientSite = () => {
                               <Calendar className="h-4 w-4" />
                               {new Date(match.match_date).toLocaleDateString()}
                               <Badge variant="secondary">Finished</Badge>
+                              {match.result && <Badge variant="default">{match.result}</Badge>}
                             </div>
                           </div>
                         </div>
@@ -603,25 +572,35 @@ const ClientSite = () => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm border-t border-gray-700 px-4 py-2">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-gray-700 px-4 py-3 z-50">
         <div className="flex items-center justify-around">
           <Button variant="ghost" className="flex flex-col items-center gap-1 text-orange-500">
             <Trophy className="h-5 w-5" />
             <span className="text-xs">Sports</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col items-center gap-1 text-gray-400">
-            <div className="h-5 w-5 rounded-full bg-gray-600"></div>
-            <span className="text-xs">Casino</span>
+          <Button 
+            variant="ghost" 
+            className="flex flex-col items-center gap-1 text-gray-400 hover:text-orange-400"
+            onClick={() => setWalletModalOpen(true)}
+          >
+            <Wallet className="h-5 w-5" />
+            <span className="text-xs">Wallet</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col items-center gap-1 text-gray-400">
-            <div className="h-5 w-5 flex items-center justify-center bg-orange-500 rounded text-black font-bold text-xs">
-              FX
-            </div>
-            <span className="text-xs">Sportsbook</span>
+          <Button 
+            variant="ghost" 
+            className="flex flex-col items-center gap-1 text-gray-400 hover:text-orange-400"
+            onClick={() => setBetHistoryModalOpen(true)}
+          >
+            <History className="h-5 w-5" />
+            <span className="text-xs">Bet History</span>
           </Button>
-          <Button variant="ghost" className="flex flex-col items-center gap-1 text-gray-400" onClick={user ? () => setProfileModalOpen(true) : handleLogin}>
+          <Button 
+            variant="ghost" 
+            className="flex flex-col items-center gap-1 text-gray-400 hover:text-orange-400" 
+            onClick={user ? () => setProfileModalOpen(true) : handleLogin}
+          >
             <User className="h-5 w-5" />
-            <span className="text-xs">Sign In</span>
+            <span className="text-xs">Profile</span>
           </Button>
         </div>
       </div>
@@ -643,6 +622,10 @@ const ClientSite = () => {
         match={selectedMatch}
         userBalance={userBalance}
         onBetPlaced={fetchUserBalance}
+      />
+      <BetHistoryModal
+        open={betHistoryModalOpen}
+        onOpenChange={setBetHistoryModalOpen}
       />
     </div>
   );
