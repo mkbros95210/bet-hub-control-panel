@@ -1,9 +1,8 @@
-
 import { Outlet, Navigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminSidebar from "./AdminSidebar";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/components/AuthProvider";
 
 const AdminLayout = () => {
   const { user, loading, signOut } = useAuth();
