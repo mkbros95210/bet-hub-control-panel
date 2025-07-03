@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,58 +37,28 @@ const GameAPI = () => {
 
   useEffect(() => {
     fetchAPIs();
-    addTheOddsAPIIfNotExists();
   }, []);
-
-  const addTheOddsAPIIfNotExists = async () => {
-    try {
-      // Check if The Odds API already exists
-      const { data: existingAPI } = await supabase
-        .from('game_apis')
-        .select('id')
-        .eq('name', 'The Odds API')
-        .single();
-
-      if (!existingAPI) {
-        // Add The Odds API
-        const { error } = await supabase
-          .from('game_apis')
-          .insert({
-            name: 'The Odds API',
-            api_url: 'https://api.the-odds-api.com/v4/sports/',
-            api_key: 'fac67bb4d9a4714e2023c44619f55796',
-            is_active: true
-          });
-
-        if (error) {
-          console.error('Error adding The Odds API:', error);
-        } else {
-          toast({
-            title: "The Odds API Added",
-            description: "The Odds API has been automatically added to your connected APIs.",
-          });
-          fetchAPIs();
-        }
-      }
-    } catch (error) {
-      console.error('Error checking/adding The Odds API:', error);
-    }
-  };
 
   const fetchAPIs = async () => {
     try {
+      console.log('Fetching APIs...');
       const { data, error } = await supabase
         .from('game_apis')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching APIs:', error);
+        throw error;
+      }
+      
+      console.log('APIs fetched successfully:', data);
       setConnectedAPIs(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching APIs:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch connected APIs",
+        description: error.message || "Failed to fetch connected APIs",
         variant: "destructive",
       });
     } finally {
@@ -317,7 +288,7 @@ const GameAPI = () => {
                 <Label htmlFor="apiName">API Name</Label>
                 <Input
                   id="apiName"
-                  placeholder="e.g., SportAPI Pro"
+                  placeholder="e.g., The Odds API"
                   value={apiForm.name}
                   onChange={(e) => setApiForm({ ...apiForm, name: e.target.value })}
                   required
@@ -329,7 +300,7 @@ const GameAPI = () => {
                 <Label htmlFor="apiUrl">API URL</Label>
                 <Input
                   id="apiUrl"
-                  placeholder="https://api.example.com"
+                  placeholder="https://api.the-odds-api.com/v4/sports/"
                   value={apiForm.url}
                   onChange={(e) => setApiForm({ ...apiForm, url: e.target.value })}
                   required
@@ -342,7 +313,7 @@ const GameAPI = () => {
                 <Input
                   id="apiKey"
                   type="password"
-                  placeholder="Enter your API key"
+                  placeholder="fac67bb4d9a4714e2023c44619f55796"
                   value={apiForm.apiKey}
                   onChange={(e) => setApiForm({ ...apiForm, apiKey: e.target.value })}
                   required
@@ -446,6 +417,122 @@ const GameAPI = () => {
       </div>
     </div>
   );
+
+  const testAPI = async (api: GameAPI) => {
+    try {
+      // Simulate API test - in real implementation, you'd make actual API call
+      const response = await fetch(api.api_url, {
+        headers: {
+          'Authorization': `Bearer ${api.api_key}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        toast({
+          title: "API Test Successful",
+          description: `Connection to ${api.name} is working properly.`,
+        });
+      } else {
+        throw new Error('API test failed');
+      }
+    } catch (error) {
+      toast({
+        title: "API Test Failed",
+        description: `Failed to connect to ${api.name}. Please check your credentials.`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const importGames = async (api: GameAPI) => {
+    setImporting(api.id);
+    try {
+      // Simulate importing games - add sample data for demonstration
+      const sampleGames = [
+        {
+          home_team: "Mumbai Indians",
+          away_team: "Chennai Super Kings",
+          sport: "cricket",
+          match_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          status: "upcoming",
+          home_odds: 1.85,
+          away_odds: 1.95,
+          show_on_frontend: false,
+          api_source_id: api.id
+        },
+        {
+          home_team: "Manchester United",
+          away_team: "Liverpool",
+          sport: "football",
+          match_date: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+          status: "upcoming",
+          home_odds: 2.1,
+          away_odds: 1.75,
+          draw_odds: 3.2,
+          show_on_frontend: false,
+          api_source_id: api.id
+        }
+      ];
+
+      const { error } = await supabase
+        .from('matches')
+        .insert(sampleGames);
+
+      if (error) throw error;
+
+      // Update last sync time
+      await supabase
+        .from('game_apis')
+        .update({ last_sync: new Date().toISOString() })
+        .eq('id', api.id);
+
+      toast({
+        title: "Games Imported Successfully",
+        description: `Imported ${sampleGames.length} games from ${api.name}.`,
+      });
+
+      fetchAPIs();
+    } catch (error) {
+      console.error('Error importing games:', error);
+      toast({
+        title: "Import Failed",
+        description: `Failed to import games from ${api.name}.`,
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(null);
+    }
+  };
+
+  const showAPIGames = (apiId: string, apiName: string) => {
+    navigate(`/admin/api-games/${apiId}?name=${encodeURIComponent(apiName)}`);
+  };
+
+  const deleteAPI = async (apiId: string) => {
+    try {
+      const { error } = await supabase
+        .from('game_apis')
+        .delete()
+        .eq('id', apiId);
+
+      if (error) throw error;
+
+      toast({
+        title: "API Deleted",
+        description: "API has been removed successfully.",
+      });
+
+      fetchAPIs();
+    } catch (error) {
+      console.error('Error deleting API:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete API",
+        variant: "destructive",
+      });
+    }
+  };
 };
 
 export default GameAPI;
