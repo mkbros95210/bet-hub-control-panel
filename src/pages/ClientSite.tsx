@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Trophy, Users, Star, Wallet, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Trophy, Users, Star, Wallet, User, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import WalletModal from "@/components/WalletModal";
@@ -34,10 +35,9 @@ interface SportCategory {
 const ClientSite = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [categories, setCategories] = useState<SportCategory[]>([]);
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const [activeCategory, setActiveCategory] = useState("inplay");
+  const [activeTab, setActiveTab] = useState("live");
   const [loading, setLoading] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState(0);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [bettingModalOpen, setBettingModalOpen] = useState(false);
@@ -47,18 +47,34 @@ const ClientSite = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Create dynamic categories based on active sport categories
-  const dynamicCategories = [
-    { id: "all", name: "All Sports", icon: Trophy },
-    ...categories.map(cat => ({
-      id: cat.category_key,
-      name: cat.category_name,
-      icon: Trophy
-    }))
+  // Mobile categories matching the first image
+  const mobileCategories = [
+    { id: "inplay", name: "Inplay", icon: "🟢", count: 121 },
+    { id: "cricket", name: "Cricket", icon: "🏏", count: 28 },
+    { id: "tennis", name: "Tennis", icon: "🎾", count: 109 },
+    { id: "kabaddi", name: "Kabaddi", icon: "🤼", count: 1 },
   ];
 
-  const categoriesPerSlide = 4;
-  const maxSlides = Math.ceil(dynamicCategories.length / categoriesPerSlide);
+  // Desktop sidebar categories matching the second image
+  const desktopCategories = [
+    { id: "sports", name: "Sports", icon: "⚽", hasSubmenu: true },
+    { id: "e-sports", name: "E-Sports", icon: "🎮", hasSubmenu: true },
+    { id: "cricket", name: "Cricket", icon: "🏏" },
+    { id: "tennis", name: "Tennis", icon: "🎾" },
+    { id: "horse-racing", name: "Horse Racing", icon: "🏇" },
+    { id: "greyhound-racing", name: "Greyhound Racing", icon: "🐕" },
+    { id: "bigg-boss", name: "BIGG BOSS", icon: "⭐" },
+    { id: "soccer", name: "Soccer", icon: "⚽" },
+    { id: "politics", name: "Politics", icon: "🏛️" },
+    { id: "volleyball", name: "Volleyball", icon: "🏐" },
+    { id: "baseball", name: "Baseball", icon: "⚾" },
+    { id: "ice-hockey", name: "Ice Hockey", icon: "🏒" },
+    { id: "virtual-cricket", name: "Virtual Cricket", icon: "🏏" },
+    { id: "boxing", name: "Boxing", icon: "🥊" },
+    { id: "rugby-league", name: "Rugby League", icon: "🏉" },
+    { id: "darts", name: "Darts", icon: "🎯" },
+    { id: "snooker", name: "Snooker", icon: "🎱" },
+  ];
 
   useEffect(() => {
     fetchData();
@@ -69,7 +85,6 @@ const ClientSite = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch matches that are visible on frontend
       const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
         .select('*')
@@ -78,7 +93,6 @@ const ClientSite = () => {
 
       if (matchesError) throw matchesError;
 
-      // Fetch active sport categories
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('sport_categories')
         .select('*')
@@ -117,7 +131,7 @@ const ClientSite = () => {
     const now = new Date();
     return matches.filter(match => {
       const matchDate = new Date(match.match_date);
-      const isFiltered = activeCategory === "all" || match.category === activeCategory || match.sport === activeCategory;
+      const isFiltered = activeCategory === "inplay" || match.category === activeCategory || match.sport === activeCategory;
       
       if (!isFiltered) return false;
       
@@ -132,24 +146,6 @@ const ClientSite = () => {
           return true;
       }
     });
-  };
-
-  const getSportIcon = (sport: string) => {
-    switch (sport.toLowerCase()) {
-      case 'cricket': return '🏏';
-      case 'football': return '⚽';
-      case 'tennis': return '🎾';
-      case 'basketball': return '🏀';
-      default: return '🏆';
-    }
-  };
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % maxSlides);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + maxSlides) % maxSlides);
   };
 
   const handleBetClick = (match: Match) => {
@@ -177,10 +173,20 @@ const ClientSite = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="text-2xl font-bold">
-                <span className="text-white">BET</span>
-                <span className="text-orange-500">HUB</span>
+                <span className="text-white">IBE</span>
+                <span className="text-orange-500">FX</span>
+                <span className="text-white">WIN</span>
               </div>
-              <nav className="hidden md:flex items-center gap-6">
+              
+              {/* Desktop Navigation */}
+              <nav className="hidden lg:flex items-center gap-6">
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="Events, Markets, and more" 
+                    className="bg-orange-500 text-black placeholder-black px-4 py-2 rounded-lg w-64"
+                  />
+                </div>
                 <Button variant="ghost" className="text-orange-500 hover:text-orange-400">
                   Sports
                 </Button>
@@ -188,13 +194,20 @@ const ClientSite = () => {
                   Casino
                 </Button>
                 <Button variant="ghost" className="text-white hover:text-orange-400">
-                  Live
+                  Promotion
                 </Button>
                 <Button variant="ghost" className="text-white hover:text-orange-400">
-                  Promotions
+                  E-Sports
+                </Button>
+                <Button variant="ghost" className="text-white hover:text-orange-400">
+                  Sportsbook
+                </Button>
+                <Button variant="ghost" className="text-white hover:text-orange-400">
+                  JetX
                 </Button>
               </nav>
             </div>
+            
             <div className="flex items-center gap-4">
               {user ? (
                 <>
@@ -228,13 +241,13 @@ const ClientSite = () => {
                     onClick={handleLogin}
                     className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
                   >
-                    Login
+                    SIGN IN
                   </Button>
                   <Button
                     onClick={handleLogin}
                     className="bg-orange-500 hover:bg-orange-600 text-white"
                   >
-                    Sign Up
+                    REGISTER
                   </Button>
                 </>
               )}
@@ -243,34 +256,30 @@ const ClientSite = () => {
         </div>
       </header>
 
-      <div className="flex flex-col lg:flex-row">
-        {/* Sidebar - Hidden on mobile, visible on large screens */}
+      <div className="flex">
+        {/* Desktop Sidebar */}
         <aside className="hidden lg:block w-64 bg-black/30 backdrop-blur-sm border-r border-orange-500/20 min-h-screen">
           <div className="p-4">
-            <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-orange-500" />
-              Sports
-            </h3>
             <div className="space-y-2">
-              {dynamicCategories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                    activeCategory === category.id
-                      ? 'bg-orange-500 text-white'
-                      : 'text-gray-300 hover:bg-orange-500/20 hover:text-orange-400'
-                  }`}
-                >
-                  <category.icon className="h-4 w-4" />
-                  {category.name}
-                  <Badge variant="secondary" className="ml-auto bg-gray-700 text-gray-300">
-                    {category.id === "all" 
-                      ? matches.length 
-                      : matches.filter(m => m.category === category.id || m.sport === category.id).length
-                    }
-                  </Badge>
-                </button>
+              {desktopCategories.map((category) => (
+                <div key={category.id}>
+                  <button
+                    onClick={() => setActiveCategory(category.id)}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center justify-between ${
+                      activeCategory === category.id
+                        ? 'bg-orange-500 text-white'
+                        : 'text-gray-300 hover:bg-orange-500/20 hover:text-orange-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{category.icon}</span>
+                      <span className="text-sm">{category.name}</span>
+                    </div>
+                    {category.hasSubmenu && (
+                      <Plus className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -296,82 +305,47 @@ const ClientSite = () => {
             </div>
           </div>
 
-          {/* Sports Categories Slider - Mobile and Tablet */}
+          {/* Mobile Sports Categories */}
           <div className="lg:hidden mb-6">
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold">Sports Categories</h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={prevSlide}
-                    className="p-2"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={nextSlide}
-                    className="p-2"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="overflow-hidden">
-                <div 
-                  className="flex transition-transform duration-300"
-                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            <div className="grid grid-cols-2 gap-3">
+              {mobileCategories.map((category) => (
+                <Card 
+                  key={category.id}
+                  className={`cursor-pointer transition-all hover:scale-105 ${
+                    activeCategory === category.id 
+                      ? 'bg-orange-500 border-orange-400' 
+                      : 'bg-black/30 border-gray-700 hover:border-orange-500/50'
+                  }`}
+                  onClick={() => setActiveCategory(category.id)}
                 >
-                  {Array.from({ length: maxSlides }).map((_, slideIndex) => (
-                    <div key={slideIndex} className="grid grid-cols-2 gap-4 w-full flex-shrink-0">
-                      {dynamicCategories
-                        .slice(slideIndex * categoriesPerSlide, (slideIndex + 1) * categoriesPerSlide)
-                        .map((category) => (
-                          <Card 
-                            key={category.id}
-                            className={`cursor-pointer transition-all hover:scale-105 ${
-                              activeCategory === category.id 
-                                ? 'bg-orange-500 border-orange-400' 
-                                : 'bg-black/30 border-gray-700 hover:border-orange-500/50'
-                            }`}
-                            onClick={() => setActiveCategory(category.id)}
-                          >
-                            <CardContent className="p-4 text-center">
-                              <div className="text-2xl mb-2">{getSportIcon(category.id)}</div>
-                              <h3 className={`font-medium text-sm ${
-                                activeCategory === category.id ? 'text-white' : 'text-gray-300'
-                              }`}>
-                                {category.name}
-                              </h3>
-                              <Badge 
-                                variant="secondary" 
-                                className={`mt-1 text-xs ${
-                                  activeCategory === category.id 
-                                    ? 'bg-white/20 text-white' 
-                                    : 'bg-gray-800 text-gray-400'
-                                }`}
-                              >
-                                {category.id === "all" 
-                                  ? matches.length 
-                                  : matches.filter(m => m.category === category.id || m.sport === category.id).length
-                                }
-                              </Badge>
-                            </CardContent>
-                          </Card>
-                        ))}
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl mb-2">{category.icon}</div>
+                    <div className="flex items-center justify-center gap-2">
+                      <h3 className={`font-medium text-sm ${
+                        activeCategory === category.id ? 'text-white' : 'text-gray-300'
+                      }`}>
+                        {category.name}
+                      </h3>
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-xs ${
+                          activeCategory === category.id 
+                            ? 'bg-white/20 text-white' 
+                            : 'bg-orange-500 text-white'
+                        }`}
+                      >
+                        {category.count}
+                      </Badge>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
 
-          {/* Sports Categories Grid - Desktop */}
-          <div className="hidden lg:grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-            {dynamicCategories.slice(1).map((category) => (
+          {/* Desktop Sports Categories - Top Bar */}
+          <div className="hidden lg:flex items-center gap-4 mb-6">
+            {mobileCategories.map((category) => (
               <Card 
                 key={category.id}
                 className={`cursor-pointer transition-all hover:scale-105 ${
@@ -381,23 +355,25 @@ const ClientSite = () => {
                 }`}
                 onClick={() => setActiveCategory(category.id)}
               >
-                <CardContent className="p-4 text-center">
-                  <div className="text-2xl mb-2">{getSportIcon(category.id)}</div>
-                  <h3 className={`font-medium ${
-                    activeCategory === category.id ? 'text-white' : 'text-gray-300'
-                  }`}>
-                    {category.name}
-                  </h3>
-                  <Badge 
-                    variant="secondary" 
-                    className={`mt-1 ${
-                      activeCategory === category.id 
-                        ? 'bg-white/20 text-white' 
-                        : 'bg-gray-800 text-gray-400'
-                    }`}
-                  >
-                    {matches.filter(m => m.category === category.id || m.sport === category.id).length}
-                  </Badge>
+                <CardContent className="p-4 text-center min-w-[120px]">
+                  <div className="text-2xl mb-2">{category.icon}</div>
+                  <div className="flex items-center justify-center gap-2">
+                    <h3 className={`font-medium text-sm ${
+                      activeCategory === category.id ? 'text-white' : 'text-gray-300'
+                    }`}>
+                      {category.name}
+                    </h3>
+                    <Badge 
+                      variant="secondary" 
+                      className={`text-xs ${
+                        activeCategory === category.id 
+                          ? 'bg-white/20 text-white' 
+                          : 'bg-orange-500 text-white'
+                      }`}
+                    >
+                      {category.count}
+                    </Badge>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -412,63 +388,114 @@ const ClientSite = () => {
             </TabsList>
 
             <TabsContent value="live" className="space-y-4">
-              <h2 className="text-2xl font-bold text-white mb-4">Live Matches</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                  Cricket (10)
+                </h2>
+                <div className="text-white text-right">
+                  <div className="text-xs text-gray-400">1 X 2</div>
+                </div>
+              </div>
+              
               {loading ? (
                 <div className="text-center py-8 text-gray-400">Loading matches...</div>
-              ) : filterMatchesByStatus('live').length > 0 ? (
-                filterMatchesByStatus('live').map((match) => (
-                  <Card key={match.id} className="bg-black/30 border-gray-700 hover:border-orange-500/50 transition-colors">
+              ) : (
+                <div className="space-y-4">
+                  {/* Sample Cricket Matches */}
+                  <Card className="bg-black/30 border-gray-700 hover:border-orange-500/50 transition-colors">
                     <CardContent className="p-4">
-                      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="text-2xl">{getSportIcon(match.sport)}</div>
-                          <div>
-                            <h3 className="text-white font-medium">
-                              {match.home_team} vs {match.away_team}
-                            </h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                              <Calendar className="h-4 w-4" />
-                              <Badge variant="destructive" className="animate-pulse">LIVE</Badge>
-                            </div>
-                          </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-orange-500 text-xs">IN-PLAY</Badge>
+                          <span className="text-white text-sm font-medium">
+                            Eng Legends (V) vs WI Legends (V)
+                          </span>
                         </div>
-                        
-                        <div className="flex flex-wrap items-center gap-2">
-                          {match.home_odds && (
-                            <Button 
-                              variant="outline" 
-                              className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
-                              onClick={() => handleBetClick(match)}
-                            >
-                              {match.home_team.split(' ')[0]} {match.home_odds}
-                            </Button>
-                          )}
-                          {match.draw_odds && (
-                            <Button 
-                              variant="outline" 
-                              className="border-gray-500 text-gray-300 hover:bg-gray-500 hover:text-white"
-                              onClick={() => handleBetClick(match)}
-                            >
-                              Draw {match.draw_odds}
-                            </Button>
-                          )}
-                          {match.away_odds && (
-                            <Button 
-                              variant="outline" 
-                              className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
-                              onClick={() => handleBetClick(match)}
-                            >
-                              {match.away_team.split(' ')[0]} {match.away_odds}
-                            </Button>
-                          )}
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <span>Virtual Cricket League</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-400">
+                          TODAY 09:22
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-6"
+                            onClick={() => handleBetClick({
+                              id: '1',
+                              home_team: 'Eng Legends',
+                              away_team: 'WI Legends',
+                              sport: 'cricket',
+                              match_date: new Date().toISOString(),
+                              status: 'live',
+                              home_odds: 1.85
+                            })}
+                          >
+                            -
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-pink-400 text-pink-400 hover:bg-pink-400 hover:text-white px-6"
+                            onClick={() => handleBetClick({
+                              id: '1',
+                              home_team: 'Eng Legends',
+                              away_team: 'WI Legends',
+                              sport: 'cricket',
+                              match_date: new Date().toISOString(),
+                              status: 'live',
+                              away_odds: 2.10
+                            })}
+                          >
+                            -
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-400">
-                  No live matches available
+
+                  <Card className="bg-black/30 border-gray-700 hover:border-orange-500/50 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-orange-500 text-xs">IN-PLAY</Badge>
+                          <span className="text-white text-sm font-medium">
+                            Pakistan (V) vs New Zealand (V)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <span>Virtual Cricket League</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-400">
+                          TODAY 09:36
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-white px-6"
+                          >
+                            -
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-pink-400 text-pink-400 hover:bg-pink-400 hover:text-white px-6"
+                          >
+                            -
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </TabsContent>
@@ -483,7 +510,7 @@ const ClientSite = () => {
                     <CardContent className="p-4">
                       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="text-2xl">{getSportIcon(match.sport)}</div>
+                          <div className="text-2xl">🏏</div>
                           <div>
                             <h3 className="text-white font-medium">
                               {match.home_team} vs {match.away_team}
@@ -549,7 +576,7 @@ const ClientSite = () => {
                     <CardContent className="p-4">
                       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="text-2xl">{getSportIcon(match.sport)}</div>
+                          <div className="text-2xl">🏏</div>
                           <div>
                             <h3 className="text-white font-medium">
                               {match.home_team} vs {match.away_team}
@@ -573,6 +600,30 @@ const ClientSite = () => {
             </TabsContent>
           </Tabs>
         </main>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm border-t border-gray-700 px-4 py-2">
+        <div className="flex items-center justify-around">
+          <Button variant="ghost" className="flex flex-col items-center gap-1 text-orange-500">
+            <Trophy className="h-5 w-5" />
+            <span className="text-xs">Sports</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col items-center gap-1 text-gray-400">
+            <div className="h-5 w-5 rounded-full bg-gray-600"></div>
+            <span className="text-xs">Casino</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col items-center gap-1 text-gray-400">
+            <div className="h-5 w-5 flex items-center justify-center bg-orange-500 rounded text-black font-bold text-xs">
+              FX
+            </div>
+            <span className="text-xs">Sportsbook</span>
+          </Button>
+          <Button variant="ghost" className="flex flex-col items-center gap-1 text-gray-400" onClick={user ? () => setProfileModalOpen(true) : handleLogin}>
+            <User className="h-5 w-5" />
+            <span className="text-xs">Sign In</span>
+          </Button>
+        </div>
       </div>
 
       {/* Modals */}
