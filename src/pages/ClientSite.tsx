@@ -109,7 +109,6 @@ const ClientSite = () => {
     }
   };
 
-  // Create dynamic categories from admin panel data
   const dynamicCategories = [
     { id: "inplay", name: "Inplay", icon: "🟢", count: matches.filter(m => m.status === 'live').length },
     ...categories.map(cat => ({
@@ -178,8 +177,7 @@ const ClientSite = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 pb-20 lg:pb-0">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 pb-24 lg:pb-0">
       <header className="bg-black/50 backdrop-blur-sm border-b border-orange-500/20 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -190,7 +188,6 @@ const ClientSite = () => {
                 <span className="text-white">WIN</span>
               </div>
               
-              {/* Desktop Navigation */}
               <nav className="hidden lg:flex items-center gap-6">
                 <div className="relative">
                   <input 
@@ -269,7 +266,6 @@ const ClientSite = () => {
       </header>
 
       <div className="flex">
-        {/* Desktop Sidebar */}
         <aside className="hidden lg:block w-64 bg-black/30 backdrop-blur-sm border-r border-orange-500/20 min-h-screen">
           <div className="p-4">
             <div className="space-y-2">
@@ -297,9 +293,7 @@ const ClientSite = () => {
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="flex-1 p-4 lg:p-6">
-          {/* Hero Banner */}
           <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-6 lg:p-8 mb-6 lg:mb-8 text-white relative overflow-hidden">
             <div className="relative z-10">
               <h1 className="text-2xl lg:text-4xl font-bold mb-4">
@@ -317,7 +311,6 @@ const ClientSite = () => {
             </div>
           </div>
 
-          {/* Mobile Sports Categories */}
           <div className="lg:hidden mb-6">
             <div className="grid grid-cols-2 gap-3">
               {dynamicCategories.slice(0, 4).map((category) => (
@@ -355,7 +348,6 @@ const ClientSite = () => {
             </div>
           </div>
 
-          {/* Desktop Sports Categories - Top Bar */}
           <div className="hidden lg:flex items-center gap-4 mb-6 flex-wrap">
             {dynamicCategories.map((category) => (
               <Card 
@@ -391,7 +383,6 @@ const ClientSite = () => {
             ))}
           </div>
 
-          {/* Match Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="grid w-full grid-cols-3 bg-black/30">
               <TabsTrigger value="live" className="data-[state=active]:bg-orange-500">Live</TabsTrigger>
@@ -560,7 +551,6 @@ const ClientSite = () => {
                               <Calendar className="h-4 w-4" />
                               {new Date(match.match_date).toLocaleDateString()}
                               <Badge variant="secondary">Finished</Badge>
-                              {match.result && <Badge variant="default">{match.result}</Badge>}
                             </div>
                           </div>
                         </div>
@@ -578,7 +568,6 @@ const ClientSite = () => {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-gray-700 px-4 py-3 z-50">
         <div className="flex items-center justify-around">
           <Button variant="ghost" className="flex flex-col items-center gap-1 text-orange-500">
@@ -612,7 +601,6 @@ const ClientSite = () => {
         </div>
       </div>
 
-      {/* Modals */}
       <WalletModal 
         open={walletModalOpen} 
         onOpenChange={setWalletModalOpen}
