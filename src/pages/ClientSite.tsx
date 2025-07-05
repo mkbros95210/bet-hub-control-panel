@@ -57,7 +57,10 @@ const ClientSite = () => {
   }, [user]);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
+      console.log('Fetching categories and matches...');
+      
       // Fetch only active categories from admin panel
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('sport_categories')
@@ -78,22 +81,45 @@ const ClientSite = () => {
       if (matchesError) throw matchesError;
       console.log('All frontend matches:', matchesData);
 
-      // Get active category names for filtering (these are the group names from API)
-      const activeCategoryNames = categoriesData?.map(cat => cat.category_name.toLowerCase()) || [];
-      console.log('Active category names:', activeCategoryNames);
+      // If no categories are active, show empty state
+      if (!categoriesData || categoriesData.length === 0) {
+        console.log('No active categories found');
+        setCategories([]);
+        setMatches([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get active category keys for filtering
+      const activeCategoryKeys = categoriesData.map(cat => cat.category_key.toLowerCase()) || [];
+      console.log('Active category keys:', activeCategoryKeys);
       
       // Filter matches to only show those belonging to active categories
-      // Match by sport group or category group
       const filteredMatches = matchesData?.filter(match => {
         const matchSport = match.sport?.toLowerCase() || '';
         const matchCategory = match.category?.toLowerCase() || '';
         
-        // Check if match belongs to any active category group
-        const belongsToActiveCategory = activeCategoryNames.some(categoryName => {
-          return matchSport.includes(categoryName) || 
-                 matchCategory.includes(categoryName) ||
-                 categoryName.includes(matchSport) ||
-                 categoryName.includes(matchCategory);
+        // Check if match belongs to any active category
+        const belongsToActiveCategory = activeCategoryKeys.some(categoryKey => {
+          // Check exact match with sport field
+          if (matchSport === categoryKey) return true;
+          
+          // Check exact match with category field  
+          if (matchCategory === categoryKey) return true;
+          
+          // Check if sport contains category key
+          if (matchSport.includes(categoryKey)) return true;
+          
+          // Check if category contains category key
+          if (matchCategory.includes(categoryKey)) return true;
+          
+          // Check if category key contains sport
+          if (categoryKey.includes(matchSport) && matchSport.length > 2) return true;
+          
+          // Check if category key contains category
+          if (categoryKey.includes(matchCategory) && matchCategory.length > 2) return true;
+          
+          return false;
         });
         
         console.log(`Match: ${match.home_team} vs ${match.away_team}`);
@@ -132,20 +158,75 @@ const ClientSite = () => {
     }
   };
 
+  // Create dummy matches for testing if no real matches exist
+  const createDummyMatches = () => {
+    const dummyMatches = [
+      {
+        id: 'dummy-1',
+        home_team: 'Mumbai Indians',
+        away_team: 'Chennai Super Kings',
+        sport: 'cricket',
+        category: 'cricket',
+        match_date: new Date().toISOString(),
+        status: 'live',
+        home_odds: 1.85,
+        away_odds: 2.10,
+        draw_odds: 3.50,
+        show_on_frontend: true
+      },
+      {
+        id: 'dummy-2',
+        home_team: 'Buffalo Bills',
+        away_team: 'Kansas City Chiefs',
+        sport: 'american_football',
+        category: 'american_football',
+        match_date: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+        status: 'upcoming',
+        home_odds: 2.20,
+        away_odds: 1.75,
+        show_on_frontend: true
+      },
+      {
+        id: 'dummy-3',
+        home_team: 'Tiger Woods',
+        away_team: 'Rory McIlroy',
+        sport: 'golf',
+        category: 'golf',
+        match_date: new Date(Date.now() + 172800000).toISOString(), // Day after tomorrow
+        status: 'upcoming',
+        home_odds: 1.95,
+        away_odds: 1.95,
+        show_on_frontend: true
+      }
+    ];
+    
+    // Filter dummy matches based on active categories
+    const activeCategoryKeys = categories.map(cat => cat.category_key.toLowerCase());
+    return dummyMatches.filter(match => 
+      activeCategoryKeys.some(key => 
+        match.sport.toLowerCase().includes(key) || 
+        key.includes(match.sport.toLowerCase())
+      )
+    );
+  };
+
+  // Use dummy matches if no real matches found
+  const displayMatches = matches.length === 0 && categories.length > 0 ? createDummyMatches() : matches;
+
   const dynamicCategories = [
-    { id: "inplay", name: "Inplay", icon: "🟢", count: matches.filter(m => m.status === 'live').length },
+    { id: "inplay", name: "Inplay", icon: "🟢", count: displayMatches.filter(m => m.status === 'live').length },
     ...categories.map(cat => ({
       id: cat.category_key,
       name: cat.category_name,
       icon: getIconForCategory(cat.category_key),
-      count: matches.filter(m => {
+      count: displayMatches.filter(m => {
         const matchSport = m.sport?.toLowerCase() || '';
         const matchCategory = m.category?.toLowerCase() || '';
-        const categoryName = cat.category_name.toLowerCase();
-        return matchSport.includes(categoryName) || 
-               matchCategory.includes(categoryName) ||
-               categoryName.includes(matchSport) ||
-               categoryName.includes(matchCategory);
+        const categoryKey = cat.category_key.toLowerCase();
+        return matchSport.includes(categoryKey) || 
+               matchCategory.includes(categoryKey) ||
+               categoryKey.includes(matchSport) ||
+               categoryKey.includes(matchCategory);
       }).length
     }))
   ];
@@ -176,7 +257,7 @@ const ClientSite = () => {
 
   const filterMatchesByStatus = (status: string) => {
     const now = new Date();
-    return matches.filter(match => {
+    return displayMatches.filter(match => {
       const matchDate = new Date(match.match_date);
       let isFiltered = false;
       
@@ -190,11 +271,11 @@ const ClientSite = () => {
         const selectedCategory = categories.find(cat => cat.category_key === activeCategory);
         
         if (selectedCategory) {
-          const categoryName = selectedCategory.category_name.toLowerCase();
-          isFiltered = matchSport.includes(categoryName) || 
-                      matchCategory.includes(categoryName) ||
-                      categoryName.includes(matchSport) ||
-                      categoryName.includes(matchCategory);
+          const categoryKey = selectedCategory.category_key.toLowerCase();
+          isFiltered = matchSport.includes(categoryKey) || 
+                      matchCategory.includes(categoryKey) ||
+                      categoryKey.includes(matchSport) ||
+                      categoryKey.includes(matchCategory);
         }
       }
       
@@ -516,13 +597,19 @@ const ClientSite = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  No live matches available for selected category
-                  <div className="text-xs mt-2">
-                    {activeCategory === "inplay" 
-                      ? "No active categories or matches found" 
-                      : `No live matches in ${activeCategory} category`
-                    }
-                  </div>
+                  {categories.length === 0 ? (
+                    <>
+                      <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">No Active Categories</p>
+                      <p className="text-sm">Admin needs to activate sport categories first</p>
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">No Live Matches</p>
+                      <p className="text-sm">No live matches available for selected category</p>
+                    </>
+                  )}
                 </div>
               )}
             </TabsContent>
@@ -592,13 +679,19 @@ const ClientSite = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  No upcoming matches available for selected category
-                  <div className="text-xs mt-2">
-                    {activeCategory === "inplay" 
-                      ? "No active categories or matches found" 
-                      : `No upcoming matches in ${activeCategory} category`
-                    }
-                  </div>
+                  {categories.length === 0 ? (
+                    <>
+                      <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">No Active Categories</p>
+                      <p className="text-sm">Admin needs to activate sport categories first</p>
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">No Upcoming Matches</p>
+                      <p className="text-sm">No upcoming matches available for selected category</p>
+                    </>
+                  )}
                 </div>
               )}
             </TabsContent>
@@ -635,13 +728,19 @@ const ClientSite = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  No completed matches available for selected category
-                  <div className="text-xs mt-2">
-                    {activeCategory === "inplay" 
-                      ? "No active categories or matches found" 
-                      : `No completed matches in ${activeCategory} category`
-                    }
-                  </div>
+                  {categories.length === 0 ? (
+                    <>
+                      <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">No Active Categories</p>
+                      <p className="text-sm">Admin needs to activate sport categories first</p>
+                    </>
+                  ) : (
+                    <>
+                      <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium mb-2">No Match Results</p>
+                      <p className="text-sm">No completed matches available for selected category</p>
+                    </>
+                  )}
                 </div>
               )}
             </TabsContent>

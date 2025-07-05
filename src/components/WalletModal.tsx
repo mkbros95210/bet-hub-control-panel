@@ -109,9 +109,81 @@ const WalletModal = ({ open, onOpenChange, userBalance, onBalanceUpdate }: Walle
 
       if (transactionError) throw transactionError;
 
-      // Redirect to payment gateway
-      if (gateway.webhook_url) {
-        // Create payment URL with transaction details
+      // Handle Razorpay specifically
+      if (gateway.type.toLowerCase() === 'razorpay' || gateway.name.toLowerCase().includes('razorpay')) {
+        // Initialize Razorpay
+        const options = {
+          key: 'rzp_test_9WseLfFCj1xbhO', // Test key - replace with your actual key
+          amount: amountValue * 100, // Amount in paise
+          currency: 'INR',
+          name: 'IBEFXWIN',
+          description: 'Add Money to Wallet',
+          order_id: transactionData.id,
+          handler: function (response: any) {
+            console.log('Payment success:', response);
+            toast({
+              title: "Payment Successful",
+              description: "Money has been added to your wallet",
+            });
+            
+            // Update transaction status to completed
+            supabase
+              .from('wallet_transactions')
+              .update({ 
+                status: 'completed',
+                processed_at: new Date().toISOString(),
+                reference_id: response.razorpay_payment_id 
+              })
+              .eq('id', transactionData.id);
+            
+            // Update user balance
+            onBalanceUpdate();
+            setAmount("");
+            setShowPaymentGateways(false);
+            onOpenChange(false);
+          },
+          prefill: {
+            name: user.email,
+            email: user.email,
+          },
+          theme: {
+            color: '#f97316'
+          },
+          modal: {
+            ondismiss: function() {
+              console.log('Payment cancelled');
+              // Update transaction status to cancelled
+              supabase
+                .from('wallet_transactions')
+                .update({ status: 'cancelled' })
+                .eq('id', transactionData.id);
+            }
+          }
+        };
+
+        // Check if Razorpay script is loaded
+        if (typeof window !== 'undefined' && (window as any).Razorpay) {
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+        } else {
+          // Load Razorpay script dynamically
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = () => {
+            const rzp = new (window as any).Razorpay(options);
+            rzp.open();
+          };
+          script.onerror = () => {
+            toast({
+              title: "Payment Gateway Error",
+              description: "Failed to load Razorpay. Please try again.",
+              variant: "destructive",
+            });
+          };
+          document.head.appendChild(script);
+        }
+      } else if (gateway.webhook_url) {
+        // Handle other payment gateways
         const paymentParams = new URLSearchParams({
           amount: amountValue.toString(),
           transaction_id: transactionData.id,
@@ -130,14 +202,13 @@ const WalletModal = ({ open, onOpenChange, userBalance, onBalanceUpdate }: Walle
           description: `Redirected to ${gateway.name} for payment completion`,
         });
 
-        // For now, close the modal - in production, you'd handle the callback
         setAmount("");
         setShowPaymentGateways(false);
         onOpenChange(false);
       } else {
         toast({
           title: "Configuration Error",
-          description: "Payment gateway URL not configured",
+          description: "Payment gateway not properly configured",
           variant: "destructive",
         });
       }
