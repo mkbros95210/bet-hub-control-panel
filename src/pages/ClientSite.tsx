@@ -66,9 +66,9 @@ const ClientSite = () => {
         .order('category_name', { ascending: true });
 
       if (categoriesError) throw categoriesError;
-      console.log('Active categories:', categoriesData);
+      console.log('Active categories from admin:', categoriesData);
 
-      // Fetch matches that are enabled for frontend
+      // Fetch all matches that are enabled for frontend
       const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
         .select('*')
@@ -76,21 +76,29 @@ const ClientSite = () => {
         .order('match_date', { ascending: true });
 
       if (matchesError) throw matchesError;
-      console.log('All matches:', matchesData);
+      console.log('All frontend matches:', matchesData);
 
-      // Filter matches based on active categories
-      // Match by both sport field and category field with category_key
-      const activeCategoryKeys = categoriesData?.map(cat => cat.category_key) || [];
+      // Get active category keys for filtering
+      const activeCategoryKeys = categoriesData?.map(cat => cat.category_key.toLowerCase()) || [];
       console.log('Active category keys:', activeCategoryKeys);
       
+      // Filter matches to only show those belonging to active categories
       const filteredMatches = matchesData?.filter(match => {
-        // Check if match.sport or match.category matches any active category_key
-        const matchesCategory = activeCategoryKeys.includes(match.sport) || 
-                               activeCategoryKeys.includes(match.category || '');
-        console.log(`Match ${match.home_team} vs ${match.away_team} - sport: ${match.sport}, category: ${match.category}, matches: ${matchesCategory}`);
-        return matchesCategory;
+        const matchSport = match.sport?.toLowerCase() || '';
+        const matchCategory = match.category?.toLowerCase() || '';
+        
+        // Check if match belongs to any active category
+        const belongsToActiveCategory = activeCategoryKeys.includes(matchSport) || 
+                                       activeCategoryKeys.includes(matchCategory);
+        
+        console.log(`Match: ${match.home_team} vs ${match.away_team}`);
+        console.log(`- Sport: ${matchSport}, Category: ${matchCategory}`);
+        console.log(`- Belongs to active category: ${belongsToActiveCategory}`);
+        
+        return belongsToActiveCategory;
       }) || [];
 
+      console.log(`Filtered matches count: ${filteredMatches.length}`);
       console.log('Filtered matches:', filteredMatches);
 
       setCategories(categoriesData || []);
@@ -125,7 +133,12 @@ const ClientSite = () => {
       id: cat.category_key,
       name: cat.category_name,
       icon: getIconForCategory(cat.category_key),
-      count: matches.filter(m => m.category === cat.category_key || m.sport === cat.category_key).length
+      count: matches.filter(m => {
+        const matchSport = m.sport?.toLowerCase() || '';
+        const matchCategory = m.category?.toLowerCase() || '';
+        const categoryKey = cat.category_key.toLowerCase();
+        return matchSport === categoryKey || matchCategory === categoryKey;
+      }).length
     }))
   ];
 
@@ -158,10 +171,15 @@ const ClientSite = () => {
       let isFiltered = false;
       
       if (activeCategory === "inplay") {
-        isFiltered = true; // Show all matches for inplay
+        // For inplay, show all matches (already filtered by active categories)
+        isFiltered = true;
       } else {
-        // Check if match belongs to selected category by comparing with category_key
-        isFiltered = match.category === activeCategory || match.sport === activeCategory;
+        // For specific category, check if match belongs to selected category
+        const matchSport = match.sport?.toLowerCase() || '';
+        const matchCategory = match.category?.toLowerCase() || '';
+        const selectedCategoryKey = activeCategory.toLowerCase();
+        
+        isFiltered = matchSport === selectedCategoryKey || matchCategory === selectedCategoryKey;
       }
       
       if (!isFiltered) return false;
@@ -436,6 +454,7 @@ const ClientSite = () => {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-400">
                           <span>{match.sport}</span>
+                          {match.category && <span>• {match.category}</span>}
                         </div>
                       </div>
                       
@@ -482,12 +501,20 @@ const ClientSite = () => {
               ) : (
                 <div className="text-center py-8 text-gray-400">
                   No live matches available for selected category
+                  <div className="text-xs mt-2">
+                    {activeCategory === "inplay" 
+                      ? "No active categories or matches found" 
+                      : `No live matches in ${activeCategory} category`
+                    }
+                  </div>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="upcoming" className="space-y-4 pb-24 lg:pb-4">
-              <h2 className="text-2xl font-bold text-white mb-4">Upcoming Matches</h2>
+              <h2 className="text-2xl font-bold text-white mb-4">
+                Upcoming Matches ({filterMatchesByStatus('upcoming').length})
+              </h2>
               {loading ? (
                 <div className="text-center py-8 text-gray-400">Loading matches...</div>
               ) : filterMatchesByStatus('upcoming').length > 0 ? (
@@ -508,6 +535,8 @@ const ClientSite = () => {
                                 hour: '2-digit',
                                 minute: '2-digit'
                               })}
+                              <span>• {match.sport}</span>
+                              {match.category && <span>• {match.category}</span>}
                             </div>
                           </div>
                         </div>
@@ -548,12 +577,20 @@ const ClientSite = () => {
               ) : (
                 <div className="text-center py-8 text-gray-400">
                   No upcoming matches available for selected category
+                  <div className="text-xs mt-2">
+                    {activeCategory === "inplay" 
+                      ? "No active categories or matches found" 
+                      : `No upcoming matches in ${activeCategory} category`
+                    }
+                  </div>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="results" className="space-y-4 pb-24 lg:pb-4">
-              <h2 className="text-2xl font-bold text-white mb-4">Match Results</h2>
+              <h2 className="text-2xl font-bold text-white mb-4">
+                Match Results ({filterMatchesByStatus('results').length})
+              </h2>
               {loading ? (
                 <div className="text-center py-8 text-gray-400">Loading results...</div>
               ) : filterMatchesByStatus('results').length > 0 ? (
@@ -571,6 +608,8 @@ const ClientSite = () => {
                               <Calendar className="h-4 w-4" />
                               {new Date(match.match_date).toLocaleDateString()}
                               <Badge variant="secondary">Finished</Badge>
+                              <span>• {match.sport}</span>
+                              {match.category && <span>• {match.category}</span>}
                             </div>
                           </div>
                         </div>
@@ -581,6 +620,12 @@ const ClientSite = () => {
               ) : (
                 <div className="text-center py-8 text-gray-400">
                   No completed matches available for selected category
+                  <div className="text-xs mt-2">
+                    {activeCategory === "inplay" 
+                      ? "No active categories or matches found" 
+                      : `No completed matches in ${activeCategory} category`
+                    }
+                  </div>
                 </div>
               )}
             </TabsContent>
