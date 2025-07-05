@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ interface Match {
   home_odds?: number;
   away_odds?: number;
   draw_odds?: number;
+  show_on_frontend?: boolean;
 }
 
 interface SportCategory {
@@ -67,7 +67,7 @@ const ClientSite = () => {
 
       if (categoriesError) throw categoriesError;
 
-      // Fetch matches that belong to active categories
+      // Fetch matches that are enabled for frontend and belong to active categories
       const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
         .select('*')
@@ -76,8 +76,15 @@ const ClientSite = () => {
 
       if (matchesError) throw matchesError;
 
+      // Filter matches based on active categories
+      const activeCategoryKeys = categoriesData?.map(cat => cat.category_key) || [];
+      const filteredMatches = matchesData?.filter(match => 
+        activeCategoryKeys.includes(match.category || '') || 
+        activeCategoryKeys.includes(match.sport)
+      ) || [];
+
       setCategories(categoriesData || []);
-      setMatches(matchesData || []);
+      setMatches(filteredMatches);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -392,7 +399,7 @@ const ClientSite = () => {
               <TabsTrigger value="results" className="data-[state=active]:bg-orange-500">Results</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="live" className="space-y-4">
+            <TabsContent value="live" className="space-y-4 pb-24 lg:pb-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
@@ -468,7 +475,7 @@ const ClientSite = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="upcoming" className="space-y-4">
+            <TabsContent value="upcoming" className="space-y-4 pb-24 lg:pb-4">
               <h2 className="text-2xl font-bold text-white mb-4">Upcoming Matches</h2>
               {loading ? (
                 <div className="text-center py-8 text-gray-400">Loading matches...</div>
@@ -534,7 +541,7 @@ const ClientSite = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="results" className="space-y-4">
+            <TabsContent value="results" className="space-y-4 pb-24 lg:pb-4">
               <h2 className="text-2xl font-bold text-white mb-4">Match Results</h2>
               {loading ? (
                 <div className="text-center py-8 text-gray-400">Loading results...</div>

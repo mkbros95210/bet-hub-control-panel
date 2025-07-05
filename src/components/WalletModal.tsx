@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -110,75 +109,37 @@ const WalletModal = ({ open, onOpenChange, userBalance, onBalanceUpdate }: Walle
 
       if (transactionError) throw transactionError;
 
-      // If gateway has webhook URL, redirect to payment page
+      // Redirect to payment gateway
       if (gateway.webhook_url) {
         // Create payment URL with transaction details
-        const paymentUrl = `${gateway.webhook_url}?amount=${amountValue}&transaction_id=${transactionData.id}&user_id=${user.id}&gateway=${gateway.type}`;
+        const paymentParams = new URLSearchParams({
+          amount: amountValue.toString(),
+          transaction_id: transactionData.id,
+          user_id: user.id,
+          gateway: gateway.type,
+          redirect_url: window.location.origin
+        });
         
-        // Open payment gateway in new window
-        const paymentWindow = window.open(paymentUrl, '_blank', 'width=800,height=600');
+        const paymentUrl = `${gateway.webhook_url}?${paymentParams.toString()}`;
+        
+        // Redirect to payment gateway
+        window.open(paymentUrl, '_blank', 'width=800,height=600');
         
         toast({
           title: "Payment Gateway Opened",
           description: `Redirected to ${gateway.name} for payment completion`,
         });
 
-        // Listen for payment completion (in real implementation, you'd handle webhooks)
-        const checkPaymentStatus = setInterval(async () => {
-          if (paymentWindow?.closed) {
-            clearInterval(checkPaymentStatus);
-            // Check transaction status
-            const { data: updatedTransaction } = await supabase
-              .from('wallet_transactions')
-              .select('status')
-              .eq('id', transactionData.id)
-              .single();
-
-            if (updatedTransaction?.status === 'completed') {
-              toast({
-                title: "Payment Successful!",
-                description: `₹${amountValue} has been added to your wallet`,
-              });
-              onBalanceUpdate();
-              setAmount("");
-              setShowPaymentGateways(false);
-              onOpenChange(false);
-            }
-          }
-        }, 1000);
-
-      } else {
-        // For demo purposes, mark as completed immediately
-        const { error: updateError } = await supabase
-          .from('wallet_transactions')
-          .update({ 
-            status: 'completed',
-            processed_at: new Date().toISOString()
-          })
-          .eq('id', transactionData.id);
-
-        if (updateError) throw updateError;
-
-        // Update user balance
-        const { error: balanceError } = await supabase
-          .from('profiles')
-          .update({ 
-            wallet_balance: userBalance + amountValue,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-
-        if (balanceError) throw balanceError;
-
-        toast({
-          title: "Payment Successful!",
-          description: `₹${amountValue} has been added to your wallet`,
-        });
-
+        // For now, close the modal - in production, you'd handle the callback
         setAmount("");
         setShowPaymentGateways(false);
-        onBalanceUpdate();
         onOpenChange(false);
+      } else {
+        toast({
+          title: "Configuration Error",
+          description: "Payment gateway URL not configured",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -342,29 +303,33 @@ const WalletModal = ({ open, onOpenChange, userBalance, onBalanceUpdate }: Walle
               {amount && parseFloat(amount) >= 100 && (
                 <div className="space-y-3">
                   <h3 className="text-white font-medium">Choose Payment Method</h3>
-                  {paymentGateways.map((gateway) => (
-                    <Card 
-                      key={gateway.id}
-                      className="bg-slate-800 border-gray-600 cursor-pointer hover:border-orange-500 transition-colors"
-                      onClick={() => handlePayment(gateway)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <CreditCard className="h-6 w-6 text-orange-500" />
-                            <div>
-                              <h4 className="font-medium text-white">{gateway.name}</h4>
-                              <p className="text-sm text-gray-400 capitalize">{gateway.type}</p>
+                  {paymentGateways.length === 0 ? (
+                    <p className="text-gray-400 text-center py-4">No payment gateways available</p>
+                  ) : (
+                    paymentGateways.map((gateway) => (
+                      <Card 
+                        key={gateway.id}
+                        className="bg-slate-800 border-gray-600 cursor-pointer hover:border-orange-500 transition-colors"
+                        onClick={() => handlePayment(gateway)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <CreditCard className="h-6 w-6 text-orange-500" />
+                              <div>
+                                <h4 className="font-medium text-white">{gateway.name}</h4>
+                                <p className="text-sm text-gray-400 capitalize">{gateway.type}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">Active</Badge>
+                              <ExternalLink className="h-4 w-4 text-gray-400" />
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">Active</Badge>
-                            {gateway.webhook_url && <ExternalLink className="h-4 w-4 text-gray-400" />}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
                 </div>
               )}
 
