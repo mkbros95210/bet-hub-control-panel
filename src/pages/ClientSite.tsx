@@ -78,18 +78,23 @@ const ClientSite = () => {
       if (matchesError) throw matchesError;
       console.log('All frontend matches:', matchesData);
 
-      // Get active category keys for filtering
-      const activeCategoryKeys = categoriesData?.map(cat => cat.category_key.toLowerCase()) || [];
-      console.log('Active category keys:', activeCategoryKeys);
+      // Get active category names for filtering (these are the group names from API)
+      const activeCategoryNames = categoriesData?.map(cat => cat.category_name.toLowerCase()) || [];
+      console.log('Active category names:', activeCategoryNames);
       
       // Filter matches to only show those belonging to active categories
+      // Match by sport group or category group
       const filteredMatches = matchesData?.filter(match => {
         const matchSport = match.sport?.toLowerCase() || '';
         const matchCategory = match.category?.toLowerCase() || '';
         
-        // Check if match belongs to any active category
-        const belongsToActiveCategory = activeCategoryKeys.includes(matchSport) || 
-                                       activeCategoryKeys.includes(matchCategory);
+        // Check if match belongs to any active category group
+        const belongsToActiveCategory = activeCategoryNames.some(categoryName => {
+          return matchSport.includes(categoryName) || 
+                 matchCategory.includes(categoryName) ||
+                 categoryName.includes(matchSport) ||
+                 categoryName.includes(matchCategory);
+        });
         
         console.log(`Match: ${match.home_team} vs ${match.away_team}`);
         console.log(`- Sport: ${matchSport}, Category: ${matchCategory}`);
@@ -136,8 +141,11 @@ const ClientSite = () => {
       count: matches.filter(m => {
         const matchSport = m.sport?.toLowerCase() || '';
         const matchCategory = m.category?.toLowerCase() || '';
-        const categoryKey = cat.category_key.toLowerCase();
-        return matchSport === categoryKey || matchCategory === categoryKey;
+        const categoryName = cat.category_name.toLowerCase();
+        return matchSport.includes(categoryName) || 
+               matchCategory.includes(categoryName) ||
+               categoryName.includes(matchSport) ||
+               categoryName.includes(matchCategory);
       }).length
     }))
   ];
@@ -157,9 +165,11 @@ const ClientSite = () => {
       rugby: "🏉",
       golf: "⛳",
       motorsport: "🏎️",
-      americanfootball_nfl: "🏈",
-      icehockey_nhl: "🏒",
-      baseball_mlb: "⚾"
+      american_football: "🏈",
+      aussie_rules: "🏈",
+      mixed_martial_arts: "🥊",
+      lacrosse: "🥍",
+      politics: "🗳️"
     };
     return iconMap[categoryKey.toLowerCase()] || "🏅";
   }
@@ -177,9 +187,15 @@ const ClientSite = () => {
         // For specific category, check if match belongs to selected category
         const matchSport = match.sport?.toLowerCase() || '';
         const matchCategory = match.category?.toLowerCase() || '';
-        const selectedCategoryKey = activeCategory.toLowerCase();
+        const selectedCategory = categories.find(cat => cat.category_key === activeCategory);
         
-        isFiltered = matchSport === selectedCategoryKey || matchCategory === selectedCategoryKey;
+        if (selectedCategory) {
+          const categoryName = selectedCategory.category_name.toLowerCase();
+          isFiltered = matchSport.includes(categoryName) || 
+                      matchCategory.includes(categoryName) ||
+                      categoryName.includes(matchSport) ||
+                      categoryName.includes(matchCategory);
+        }
       }
       
       if (!isFiltered) return false;

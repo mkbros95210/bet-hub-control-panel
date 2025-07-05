@@ -18,6 +18,15 @@ interface SportCategory {
   api_source_id: string;
 }
 
+interface ApiSport {
+  key: string;
+  group: string;
+  title: string;
+  description: string;
+  active: boolean;
+  has_outrights: boolean;
+}
+
 const SportCategories = () => {
   const { apiId } = useParams();
   const [searchParams] = useSearchParams();
@@ -70,7 +79,7 @@ const SportCategories = () => {
 
       if (apiError) throw apiError;
 
-      // Fetch categories from The Odds API
+      // Fetch sports from The Odds API
       const testUrl = apiData.api_url.includes('the-odds-api.com') 
         ? `${apiData.api_url}${apiData.api_url.includes('?') ? '&' : '?'}apiKey=${apiData.api_key}`
         : apiData.api_url;
@@ -81,16 +90,27 @@ const SportCategories = () => {
         throw new Error(`API returned ${response.status}`);
       }
 
-      const sportsData = await response.json();
+      const sportsData: ApiSport[] = await response.json();
       console.log('Fetched sports data:', sportsData);
 
-      // Transform and insert categories
-      const categoriesToInsert = Array.isArray(sportsData) ? sportsData.map((sport: any) => ({
+      // Group sports by their group field and create categories for each unique group
+      const groupsMap = new Map<string, ApiSport[]>();
+      
+      sportsData.forEach((sport) => {
+        const groupName = sport.group || 'Other';
+        if (!groupsMap.has(groupName)) {
+          groupsMap.set(groupName, []);
+        }
+        groupsMap.get(groupName)?.push(sport);
+      });
+
+      // Create categories for each group
+      const categoriesToInsert = Array.from(groupsMap.entries()).map(([groupName, sports]) => ({
         api_source_id: apiId,
-        category_key: sport.key || sport.sport_key || sport.id,
-        category_name: sport.title || sport.name || sport.key,
+        category_key: groupName.toLowerCase().replace(/\s+/g, '_'), // Convert to snake_case
+        category_name: groupName,
         is_active: false
-      })) : [];
+      }));
 
       if (categoriesToInsert.length > 0) {
         // Use upsert to avoid duplicates
