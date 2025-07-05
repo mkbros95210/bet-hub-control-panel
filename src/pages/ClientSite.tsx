@@ -66,8 +66,9 @@ const ClientSite = () => {
         .order('category_name', { ascending: true });
 
       if (categoriesError) throw categoriesError;
+      console.log('Active categories:', categoriesData);
 
-      // Fetch matches that are enabled for frontend and belong to active categories
+      // Fetch matches that are enabled for frontend
       const { data: matchesData, error: matchesError } = await supabase
         .from('matches')
         .select('*')
@@ -75,13 +76,22 @@ const ClientSite = () => {
         .order('match_date', { ascending: true });
 
       if (matchesError) throw matchesError;
+      console.log('All matches:', matchesData);
 
       // Filter matches based on active categories
+      // Match by both sport field and category field with category_key
       const activeCategoryKeys = categoriesData?.map(cat => cat.category_key) || [];
-      const filteredMatches = matchesData?.filter(match => 
-        activeCategoryKeys.includes(match.category || '') || 
-        activeCategoryKeys.includes(match.sport)
-      ) || [];
+      console.log('Active category keys:', activeCategoryKeys);
+      
+      const filteredMatches = matchesData?.filter(match => {
+        // Check if match.sport or match.category matches any active category_key
+        const matchesCategory = activeCategoryKeys.includes(match.sport) || 
+                               activeCategoryKeys.includes(match.category || '');
+        console.log(`Match ${match.home_team} vs ${match.away_team} - sport: ${match.sport}, category: ${match.category}, matches: ${matchesCategory}`);
+        return matchesCategory;
+      }) || [];
+
+      console.log('Filtered matches:', filteredMatches);
 
       setCategories(categoriesData || []);
       setMatches(filteredMatches);
@@ -133,7 +143,10 @@ const ClientSite = () => {
       boxing: "🥊",
       rugby: "🏉",
       golf: "⛳",
-      motorsport: "🏎️"
+      motorsport: "🏎️",
+      americanfootball_nfl: "🏈",
+      icehockey_nhl: "🏒",
+      baseball_mlb: "⚾"
     };
     return iconMap[categoryKey.toLowerCase()] || "🏅";
   }
@@ -142,7 +155,14 @@ const ClientSite = () => {
     const now = new Date();
     return matches.filter(match => {
       const matchDate = new Date(match.match_date);
-      const isFiltered = activeCategory === "inplay" || match.category === activeCategory || match.sport === activeCategory;
+      let isFiltered = false;
+      
+      if (activeCategory === "inplay") {
+        isFiltered = true; // Show all matches for inplay
+      } else {
+        // Check if match belongs to selected category by comparing with category_key
+        isFiltered = match.category === activeCategory || match.sport === activeCategory;
+      }
       
       if (!isFiltered) return false;
       
@@ -461,7 +481,7 @@ const ClientSite = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  No live matches available
+                  No live matches available for selected category
                 </div>
               )}
             </TabsContent>
@@ -527,7 +547,7 @@ const ClientSite = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  No upcoming matches available
+                  No upcoming matches available for selected category
                 </div>
               )}
             </TabsContent>
@@ -560,7 +580,7 @@ const ClientSite = () => {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  No completed matches available
+                  No completed matches available for selected category
                 </div>
               )}
             </TabsContent>
