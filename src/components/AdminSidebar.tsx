@@ -1,97 +1,96 @@
 
-import { NavLink } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { 
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { 
-  Settings,
-  Users,
-  Search,
-  Plus,
-  User,
-  Trophy,
-  DollarSign,
-  Wallet as WalletIcon,
-  CreditCard
+  LayoutDashboard, 
+  Users, 
+  Trophy, 
+  CreditCard, 
+  Settings, 
+  GamepadIcon,
+  Wallet,
+  Star,
+  Globe
 } from "lucide-react";
 
-const menuItems = [
-  { title: "Dashboard", url: "/admin/dashboard", icon: Search },
-  { title: "Game API", url: "/admin/game-api", icon: Plus },
-  { title: "Game Manager", url: "/admin/games", icon: Trophy },
-  { title: "Users", url: "/admin/users", icon: Users },
-  { title: "Bets", url: "/admin/bets", icon: DollarSign },
-  { title: "Wallet", url: "/admin/wallet", icon: WalletIcon },
-  { title: "Payment Gateways", url: "/admin/payment-gateways", icon: CreditCard },
-  { title: "Settings", url: "/admin/settings", icon: Settings },
+const sidebarItems = [
+  {
+    title: "Dashboard",
+    href: "/admin",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Users",
+    href: "/admin/users",
+    icon: Users,
+  },
+  {
+    title: "Games",
+    href: "/admin/games",
+    icon: Trophy,
+  },
+  {
+    title: "Game APIs",
+    href: "/admin/game-api",
+    icon: GamepadIcon,
+  },
+  {
+    title: "Bets",
+    href: "/admin/bets",
+    icon: Trophy,
+  },
+  {
+    title: "Wallet",
+    href: "/admin/wallet",
+    icon: Wallet,
+  },
+  {
+    title: "Payment Gateways",
+    href: "/admin/payment-gateways",
+    icon: CreditCard,
+  },
+  {
+    title: "Hero Banners",
+    href: "/admin/hero-banners",
+    icon: Star,
+  },
+  {
+    title: "Settings",
+    href: "/admin/settings",
+    icon: Settings,
+  },
 ];
 
-const AdminSidebar = () => {
-  return (
-    <Sidebar className="w-64 bg-sidebar border-sidebar-border">
-      <SidebarContent className="bg-sidebar">
-        <div className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">B</span>
-            </div>
-            <div>
-              <h2 className="font-bold text-sidebar-foreground">BetHub</h2>
-              <p className="text-xs text-sidebar-foreground/60">Admin Panel</p>
-            </div>
-          </div>
-        </div>
-        
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60">
-            Main Menu
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                          isActive 
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-card" 
-                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        }`
-                      }
-                    >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+export const AdminSidebar = () => {
+  const location = useLocation();
 
-        <div className="mt-auto p-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-              <User className="h-4 w-4" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-sidebar-foreground">Admin User</p>
-              <p className="text-xs text-sidebar-foreground/60">admin@bethub.com</p>
-            </div>
+  return (
+    <div className="pb-12 w-64">
+      <div className="space-y-4 py-4">
+        <div className="px-3 py-2">
+          <div className="flex items-center mb-2">
+            <Globe className="h-6 w-6 mr-2" />
+            <h2 className="text-lg font-semibold">Admin Panel</h2>
+          </div>
+          <div className="space-y-1">
+            {sidebarItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                  location.pathname === item.href
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                <item.icon className="mr-2 h-4 w-4" />
+                {item.title}
+              </Link>
+            ))}
           </div>
         </div>
-      </SidebarContent>
-    </Sidebar>
+      </div>
+    </div>
   );
 };
-
-export default AdminSidebar;

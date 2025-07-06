@@ -33,9 +33,19 @@ interface SportCategory {
   is_active: boolean;
 }
 
+interface HeroBanner {
+  id: string;
+  title: string;
+  subtitle: string;
+  button_text: string;
+  background_color: string;
+  is_active: boolean;
+}
+
 const ClientSite = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [categories, setCategories] = useState<SportCategory[]>([]);
+  const [heroBanner, setHeroBanner] = useState<HeroBanner | null>(null);
   const [activeCategory, setActiveCategory] = useState("inplay");
   const [activeTab, setActiveTab] = useState("live");
   const [loading, setLoading] = useState(true);
@@ -51,6 +61,7 @@ const ClientSite = () => {
 
   useEffect(() => {
     fetchData();
+    fetchHeroBanner();
     if (user) {
       fetchUserBalance();
     }
@@ -81,63 +92,31 @@ const ClientSite = () => {
       if (matchesError) throw matchesError;
       console.log('All frontend matches:', matchesData);
 
-      // If no categories are active, show empty state
-      if (!categoriesData || categoriesData.length === 0) {
-        console.log('No active categories found');
-        setCategories([]);
-        setMatches([]);
-        setLoading(false);
-        return;
-      }
-
-      // Get active category keys for filtering
-      const activeCategoryKeys = categoriesData.map(cat => cat.category_key.toLowerCase()) || [];
-      console.log('Active category keys:', activeCategoryKeys);
-      
-      // Filter matches to only show those belonging to active categories
-      const filteredMatches = matchesData?.filter(match => {
-        const matchSport = match.sport?.toLowerCase() || '';
-        const matchCategory = match.category?.toLowerCase() || '';
-        
-        // Check if match belongs to any active category
-        const belongsToActiveCategory = activeCategoryKeys.some(categoryKey => {
-          // Check exact match with sport field
-          if (matchSport === categoryKey) return true;
-          
-          // Check exact match with category field  
-          if (matchCategory === categoryKey) return true;
-          
-          // Check if sport contains category key
-          if (matchSport.includes(categoryKey)) return true;
-          
-          // Check if category contains category key
-          if (matchCategory.includes(categoryKey)) return true;
-          
-          // Check if category key contains sport
-          if (categoryKey.includes(matchSport) && matchSport.length > 2) return true;
-          
-          // Check if category key contains category
-          if (categoryKey.includes(matchCategory) && matchCategory.length > 2) return true;
-          
-          return false;
-        });
-        
-        console.log(`Match: ${match.home_team} vs ${match.away_team}`);
-        console.log(`- Sport: ${matchSport}, Category: ${matchCategory}`);
-        console.log(`- Belongs to active category: ${belongsToActiveCategory}`);
-        
-        return belongsToActiveCategory;
-      }) || [];
-
-      console.log(`Filtered matches count: ${filteredMatches.length}`);
-      console.log('Filtered matches:', filteredMatches);
-
       setCategories(categoriesData || []);
-      setMatches(filteredMatches);
+      setMatches(matchesData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHeroBanner = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('hero_banners')
+        .select('*')
+        .eq('is_active', true)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching hero banner:', error);
+        return;
+      }
+
+      setHeroBanner(data);
+    } catch (error) {
+      console.error('Error fetching hero banner:', error);
     }
   };
 
@@ -158,68 +137,13 @@ const ClientSite = () => {
     }
   };
 
-  // Create dummy matches for testing if no real matches exist
-  const createDummyMatches = () => {
-    const dummyMatches = [
-      {
-        id: 'dummy-1',
-        home_team: 'Mumbai Indians',
-        away_team: 'Chennai Super Kings',
-        sport: 'cricket',
-        category: 'cricket',
-        match_date: new Date().toISOString(),
-        status: 'live',
-        home_odds: 1.85,
-        away_odds: 2.10,
-        draw_odds: 3.50,
-        show_on_frontend: true
-      },
-      {
-        id: 'dummy-2',
-        home_team: 'Buffalo Bills',
-        away_team: 'Kansas City Chiefs',
-        sport: 'american_football',
-        category: 'american_football',
-        match_date: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
-        status: 'upcoming',
-        home_odds: 2.20,
-        away_odds: 1.75,
-        show_on_frontend: true
-      },
-      {
-        id: 'dummy-3',
-        home_team: 'Tiger Woods',
-        away_team: 'Rory McIlroy',
-        sport: 'golf',
-        category: 'golf',
-        match_date: new Date(Date.now() + 172800000).toISOString(), // Day after tomorrow
-        status: 'upcoming',
-        home_odds: 1.95,
-        away_odds: 1.95,
-        show_on_frontend: true
-      }
-    ];
-    
-    // Filter dummy matches based on active categories
-    const activeCategoryKeys = categories.map(cat => cat.category_key.toLowerCase());
-    return dummyMatches.filter(match => 
-      activeCategoryKeys.some(key => 
-        match.sport.toLowerCase().includes(key) || 
-        key.includes(match.sport.toLowerCase())
-      )
-    );
-  };
-
-  // Use dummy matches if no real matches found
-  const displayMatches = matches.length === 0 && categories.length > 0 ? createDummyMatches() : matches;
-
   const dynamicCategories = [
-    { id: "inplay", name: "Inplay", icon: "🟢", count: displayMatches.filter(m => m.status === 'live').length },
+    { id: "inplay", name: "Inplay", icon: "🟢", count: matches.filter(m => m.status === 'live').length },
     ...categories.map(cat => ({
       id: cat.category_key,
       name: cat.category_name,
       icon: getIconForCategory(cat.category_key),
-      count: displayMatches.filter(m => {
+      count: matches.filter(m => {
         const matchSport = m.sport?.toLowerCase() || '';
         const matchCategory = m.category?.toLowerCase() || '';
         const categoryKey = cat.category_key.toLowerCase();
@@ -257,7 +181,7 @@ const ClientSite = () => {
 
   const filterMatchesByStatus = (status: string) => {
     const now = new Date();
-    return displayMatches.filter(match => {
+    return matches.filter(match => {
       const matchDate = new Date(match.match_date);
       let isFiltered = false;
       
@@ -429,14 +353,20 @@ const ClientSite = () => {
         </aside>
 
         <main className="flex-1 p-4 lg:p-6">
-          <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-6 lg:p-8 mb-6 lg:mb-8 text-white relative overflow-hidden">
+          <div 
+            className={`rounded-xl p-6 lg:p-8 mb-6 lg:mb-8 text-white relative overflow-hidden ${
+              heroBanner?.background_color || 'bg-gradient-to-r from-orange-600 to-red-600'
+            }`}
+          >
             <div className="relative z-10">
               <h1 className="text-2xl lg:text-4xl font-bold mb-4">
-                Go Crazy With
-                <span className="block text-yellow-300">LIVE BETTING</span>
+                {heroBanner?.title || 'Go Crazy With'}
+                <span className="block text-yellow-300">
+                  {heroBanner?.subtitle || 'LIVE BETTING'}
+                </span>
               </h1>
               <Button className="bg-yellow-500 text-black hover:bg-yellow-400 font-bold px-6 lg:px-8 py-2 lg:py-3">
-                PLAY NOW
+                {heroBanner?.button_text || 'PLAY NOW'}
               </Button>
             </div>
             <div className="absolute right-4 top-4 opacity-20">
