@@ -1,6 +1,6 @@
 import { Outlet, Navigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import AdminSidebar from "./AdminSidebar";
+import { AdminSidebar } from "./AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/AuthProvider";
 
